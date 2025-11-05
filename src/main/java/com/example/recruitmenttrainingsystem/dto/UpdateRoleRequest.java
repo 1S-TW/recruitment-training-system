@@ -3,7 +3,7 @@ package com.example.recruitmenttrainingsystem.dto;
 import lombok.Data;
 
 @Data
-public class LoginRequest {
+public class UpdateRoleRequest {
     private String email;
-    private String password;
+    private String roleName;
 }

@@ -1,31 +1,24 @@
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import java.util.List;
+import lombok.Data;
+import java.util.Set;
 
 @Entity
-@Table(name = "department")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Data
+@Table(name = "Department")
 public class Department {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "department_id")
+    private Long departmentId;
 
-    @Column(nullable = false, unique = true)
-    private String name;
+    @Column(name = "department_name", nullable = false, length = 150)
+    private String departmentName;
 
-    private String description;
+    @Column(name = "status", nullable = false)
+    private boolean status = true;
 
-    // Nếu bạn muốn biết ai là trưởng bộ phận
-    @OneToOne
-    @JoinColumn(name = "manager_id")
-    private User manager;
-
-    @OneToMany(mappedBy = "department")
-    private List<User> users;
+    @OneToMany(mappedBy = "department", fetch = FetchType.LAZY)
+    private Set<User> users;
 }

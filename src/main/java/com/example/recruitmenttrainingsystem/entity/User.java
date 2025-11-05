@@ -1,54 +1,51 @@
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
-import java.util.Collection;
-import java.util.List;
+import lombok.Data;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class User implements UserDetails {
+@Data
+@Table(name = "User")
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "user_id")
+    private Long userId;
 
-    private String username;
-
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(nullable = false)
-    private String password;
-
-    @ManyToOne
-    @JoinColumn(name = "role_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    @ManyToOne
-    @JoinColumn(name = "department_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 
-    private String status; // ACTIVE / INACTIVE
+    @Column(name = "full_name", nullable = false, length = 150)
+    private String fullName;
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_ID_" + role.getId()));
-    }
+    @Column(name = "email", nullable = false, length = 150, unique = true)
+    private String email;
 
-    @Override public String getPassword() { return password; }
-    @Override public String getUsername() { return email; }
-    @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
-    @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return "ACTIVE".equalsIgnoreCase(status); }
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(name = "password_hash", nullable = false, length = 255)
+    private String passwordHash;
+
+    @Column(name = "status", nullable = false)
+    private boolean status = true;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    // Email Verification
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "verification_token", length = 255)
+    private String verificationToken;
+
+    @Column(name = "token_expiry")
+    private LocalDateTime tokenExpiry;
 }
-
