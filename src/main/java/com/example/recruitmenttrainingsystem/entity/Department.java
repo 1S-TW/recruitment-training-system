@@ -6,8 +6,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "department")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -21,11 +20,4 @@ public class Department {
 
     private String description;
 
-    // Nếu bạn muốn biết ai là trưởng bộ phận
-    @OneToOne
-    @JoinColumn(name = "manager_id")
-    private User manager;
-
-    @OneToMany(mappedBy = "department")
-    private List<User> users;
 }

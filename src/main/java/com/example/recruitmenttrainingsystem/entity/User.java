@@ -11,17 +11,14 @@ import java.util.List;
 
 @Entity
 @Table(name = "user")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String username;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -44,6 +41,9 @@ public class User implements UserDetails {
         return List.of(new SimpleGrantedAuthority("ROLE_ID_" + role.getId()));
     }
 
+    public String getEmail() { return email; }
+    public Role getRole() { return role; }
+
     @Override public String getPassword() { return password; }
     @Override public String getUsername() { return email; }
     @Override public boolean isAccountNonExpired() { return true; }
@@ -51,4 +51,3 @@ public class User implements UserDetails {
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled() { return "ACTIVE".equalsIgnoreCase(status); }
 }
-

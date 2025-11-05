@@ -5,17 +5,22 @@ import lombok.*;
 
 @Entity
 @Table(name = "role")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+
 public class Role {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id; // 1..5
 
     @Column(nullable = false, unique = true)
     private String name;
 
     private String description;
+
+    public String getId() {
+        return String.valueOf(id);
+    }
 }
+
