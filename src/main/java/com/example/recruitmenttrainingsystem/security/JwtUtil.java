@@ -1,4 +1,4 @@
 package com.example.recruitmenttrainingsystem.security;
 
-public class JwtService {
+public class JwtUtil {
 }
