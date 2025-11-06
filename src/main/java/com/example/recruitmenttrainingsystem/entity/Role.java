@@ -15,12 +15,9 @@ public class Role {
     private Long id; // 1..5
 
     @Column(nullable = false, unique = true)
-    private String name;
+    private String roleName;
 
     private String description;
 
-    public String getId() {
-        return String.valueOf(id);
-    }
 }
 
