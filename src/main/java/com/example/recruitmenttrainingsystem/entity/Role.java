@@ -2,20 +2,21 @@ package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.UUID;
 
 @Entity
-@Table(name = "role")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Table(name = "roles")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Role {
+
     @Id
-    private Long id; // 1..5
+    @GeneratedValue
+    @Column(name = "role_id", columnDefinition = "BINARY(16)")
+    private UUID id;
 
-    @Column(nullable = false, unique = true)
-    private String name;
+    @Column(name = "role_name", nullable = false, unique = true, length = 100)
+    private String roleName;
 
+    @Column(length = 255)
     private String description;
 }
