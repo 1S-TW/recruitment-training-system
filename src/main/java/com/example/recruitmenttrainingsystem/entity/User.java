@@ -2,12 +2,11 @@ package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
+import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
+import java.util.Date;
 
 @Entity
 @Table(name = "user")
@@ -17,38 +16,58 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class User implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String username;
-
     @Column(nullable = false, unique = true)
-    private String email;
+    private String username;
 
     @Column(nullable = false)
     private String password;
 
-    @ManyToOne
-    @JoinColumn(name = "role_id")
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    // 🔹 Mối quan hệ với Role (nhiều user có 1 role)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", referencedColumnName = "id")
     private Role role;
 
-    @ManyToOne
+    // 🔹 Mối quan hệ với Department (nhiều user thuộc 1 department)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id")
     private Department department;
 
-    private String status; // ACTIVE / INACTIVE
+    private Boolean active = true;
 
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date createdAt = new Date();
+
+    // ✅ Implementation for Spring Security
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_ID_" + role.getId()));
+        return Collections.singleton(() -> role.getName());
     }
 
-    @Override public String getPassword() { return password; }
-    @Override public String getUsername() { return email; }
-    @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return true; }
-    @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return "ACTIVE".equalsIgnoreCase(status); }
-}
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return Boolean.TRUE.equals(active);
+    }
+}

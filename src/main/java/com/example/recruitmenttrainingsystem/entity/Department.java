@@ -12,6 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class Department {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,11 +22,12 @@ public class Department {
 
     private String description;
 
-    // Nếu bạn muốn biết ai là trưởng bộ phận
+    // 🔹 Nếu muốn biết ai là trưởng bộ phận (1 phòng chỉ có 1 trưởng)
     @OneToOne
-    @JoinColumn(name = "manager_id")
+    @JoinColumn(name = "manager_id", referencedColumnName = "id")
     private User manager;
 
-    @OneToMany(mappedBy = "department")
+    // 🔹 Một phòng có nhiều nhân viên (user)
+    @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<User> users;
 }
