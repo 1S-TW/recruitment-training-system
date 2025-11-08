@@ -26,15 +26,29 @@ public class SecurityConfig {
                 sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         );
 
+        // PHÂN QUYỀN TẠI ĐÂY
         http.authorizeHttpRequests(auth ->
                 auth.requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/verify",
-                                "/error"
-                        ).permitAll()
-                        .anyRequest().authenticated()
+                                "/error",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password"
+                        ).permitAll() // 1. Các endpoint public
+
+                        // 2. Các endpoint cho ADMIN
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("SUPER_ADMIN") // Chỉ SUPER_ADMIN
+
+                        // 3. Các endpoint cho user đã đăng nhập (ví dụ: đổi mật khẩu)
+                        .requestMatchers("/api/user/**")
+                        .authenticated() // Bất kỳ ai đã đăng nhập
+
+                        // 4. Tất cả các request khác (nếu có)
+                        .anyRequest().authenticated() // Cần đăng nhập
         );
+        // --- KẾT THÚC CẬP NHẬT ---
 
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

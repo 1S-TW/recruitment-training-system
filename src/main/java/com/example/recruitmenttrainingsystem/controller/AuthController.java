@@ -31,4 +31,16 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
         return ResponseEntity.ok(userService.login(req));
     }
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgot(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request);
+        return ResponseEntity.ok("Đã gửi email khôi phục mật khẩu.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> reset(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+        return ResponseEntity.ok("Đổi mật khẩu thành công.");
+    }
+
 }

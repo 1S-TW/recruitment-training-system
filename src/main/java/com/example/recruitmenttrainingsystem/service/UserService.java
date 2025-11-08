@@ -22,6 +22,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     // REGISTER
     public void register(RegisterRequest request) {
@@ -55,7 +56,7 @@ public class UserService {
 
         verificationTokenRepository.save(vt);
 
-        emailService.sendVerificationEmail(user.getEmail(), token);
+        emailService.sendVerificationEmail(user.getEmail(), token, user.getFullName());
     }
 
     // VERIFY
@@ -93,5 +94,86 @@ public class UserService {
         String token = jwtUtil.generateToken(user.getEmail(), role);
 
         return new LoginResponse(token, role, user.getFullName());
+    }
+    // Forgot pasword
+    public void forgotPassword(ForgotPasswordRequest request) {
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new CustomException("Email không tồn tại"));
+
+        String token = UUID.randomUUID().toString();
+
+        PasswordResetToken prt = PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiresAt(Instant.now().plusSeconds(1800)) // 30 phút
+                .build();
+
+        passwordResetTokenRepository.save(prt);
+
+        emailService.sendResetPasswordEmail(user.getEmail(), token);
+    }
+    //reset password
+    public void resetPassword(ResetPasswordRequest request) {
+
+        PasswordResetToken prt = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new CustomException("Token không hợp lệ"));
+
+        if (prt.isExpired()) {
+            throw new CustomException("Token đã hết hạn");
+        }
+
+        User user = prt.getUser();
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        // Xoá token sau khi dùng
+        passwordResetTokenRepository.delete(prt);
+    }
+    // change pasword
+    public void changePassword(String email, ChangePasswordRequest request) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException("Không tìm thấy user"));
+
+        // 1. Check mật khẩu cũ
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new CustomException("Mật khẩu cũ không đúng");
+        }
+
+        // 2. Set mật khẩu mới
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    // phan quyen ( ADMIN )
+    public void assignRole(UUID userId, AssignRoleRequest request, String adminEmail) {
+
+        // 1. Tìm user mục tiêu
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException("Không tìm thấy user với ID: " + userId));
+
+        // 2. Tìm role mới
+        String newRoleName = request.getRoleName();
+        Role newRole = roleRepository.findByRoleName(newRoleName)
+                .orElseThrow(() -> new CustomException("Không tìm thấy role: " + newRoleName));
+
+        // 3. (Rất quan trọng) Kiểm tra admin có tự đổi role của chính mình không
+        User adminUser = userRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new CustomException("Lỗi: Không tìm thấy admin user"));
+
+        if (adminUser.getId().equals(targetUser.getId())) {
+            throw new CustomException("Admin không thể tự thay đổi role của chính mình.");
+        }
+
+        // 4. Kiểm tra xem role có thực sự thay đổi không
+        if (targetUser.getRole().getRoleName().equals(newRoleName)) {
+            throw new CustomException("User đã có role này rồi.");
+        }
+
+        // 5. Cập nhật và lưu
+        targetUser.setRole(newRole);
+        userRepository.save(targetUser);
     }
 }

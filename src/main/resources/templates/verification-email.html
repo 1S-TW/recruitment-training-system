@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực tài khoản</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; }
+        .container { width: 90%; max-width: 600px; margin: 20px auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #004a99; color: white; padding: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 30px; }
+        .content p { margin-bottom: 20px; }
+        .button {
+            display: inline-block;
+            background-color: #004a99;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .footer { background-color: #f9f9f9; color: #777; padding: 20px; text-align: center; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Aristotle Training System</h1>
+    </div>
+    <div class="content">
+        <p>Chào <strong th:text="${fullName}">Người dùng</strong>,</p>
+        <p>Cảm ơn bạn đã đăng ký tài khoản. Vui lòng nhấn vào nút bên dưới để kích hoạt tài khoản của bạn và hoàn tất quá trình đăng ký.</p>
+        <p style="text-align: center;">
+            <a th:href="${verificationLink}" class="button">Kích hoạt tài khoản</a>
+        </p>
+        <p>Liên kết này sẽ hết hạn trong 1 giờ.</p>
+    </div>
+    <div class="footer">
+        <p>&copy; 2025 Aristotle Training System. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
