@@ -10,8 +10,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
-
+import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -31,9 +32,6 @@ public class UserService {
             throw new CustomException("Email đã tồn tại");
         }
 
-        Role hrRole = roleRepository.findByRoleName("HR")
-                .orElseThrow(() -> new CustomException("Không tìm thấy role HR"));
-
         User user = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
@@ -41,7 +39,6 @@ public class UserService {
                 .emailVerified(false)
                 .status(true)
                 .createdAt(Instant.now())
-                .role(hrRole)
                 .build();
 
         userRepository.save(user);
@@ -89,7 +86,10 @@ public class UserService {
             throw new CustomException("Sai mật khẩu");
         }
 
-        String role = user.getRole().getRoleName();
+        String role = null;
+        if (user.getRole() != null) {
+            role = user.getRole().getRoleName();
+        }
 
         String token = jwtUtil.generateToken(user.getEmail(), role);
 
@@ -146,7 +146,16 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
     }
+    // (admin) lay tat ca tai khoan
+    public List<UserManagementDTO> getAllUsersForAdmin() {
+        // Dùng hàm findAll() có sẵn của JpaRepository
+        List<User> users = userRepository.findAll();
 
+        // Chuyển User (Entity) sang UserManagementDTO
+        return users.stream()
+                .map(UserManagementDTO::new)
+                .collect(Collectors.toList());
+    }
     // phan quyen ( ADMIN )
     public void assignRole(UUID userId, AssignRoleRequest request, String adminEmail) {
 
@@ -176,4 +185,5 @@ public class UserService {
         targetUser.setRole(newRole);
         userRepository.save(targetUser);
     }
+
 }

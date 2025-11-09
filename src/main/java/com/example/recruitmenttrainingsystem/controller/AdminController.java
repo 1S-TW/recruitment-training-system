@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.recruitmenttrainingsystem.dto.UserManagementDTO;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -18,9 +19,7 @@ public class AdminController {
 
     private final UserService userService;
 
-    /**
-     * Endpoint cho SUPER_ADMIN thay đổi role của bất kỳ user nào khác.
-     */
+
     @PutMapping("/users/{userId}/role")
     public ResponseEntity<?> assignRole(
             @PathVariable UUID userId,
@@ -30,5 +29,11 @@ public class AdminController {
         // auth.getName() sẽ trả về email của SUPER_ADMIN (đã được set trong JwtFilter)
         userService.assignRole(userId, request, auth.getName());
         return ResponseEntity.ok("Cập nhật role thành công.");
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<UserManagementDTO>> getAllUsers() {
+        List<UserManagementDTO> users = userService.getAllUsersForAdmin();
+        return ResponseEntity.ok(users);
     }
 }

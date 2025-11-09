@@ -1,7 +1,10 @@
 package com.example.recruitmenttrainingsystem.security;
-
 import com.example.recruitmenttrainingsystem.security.JwtUtil;
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -10,9 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import jakarta.servlet.*;
-import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -36,13 +38,21 @@ public class JwtFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtUtil.parseClaims(token);
                 String email = claims.getSubject();
-                String role = claims.get("role", String.class);
+                String role = claims.get("role", String.class); // Sẽ là null nếu user chưa có role
+
+
+                // Xử lý trường hợp user chưa có role
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                if (StringUtils.hasText(role)) {
+                    // Chỉ thêm quyền nếu role tồn tại
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                }
 
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
                                 email,
                                 null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                                authorities // Truyền vào danh sách (có thể rỗng)
                         );
 
                 SecurityContextHolder.getContext().setAuthentication(auth);
