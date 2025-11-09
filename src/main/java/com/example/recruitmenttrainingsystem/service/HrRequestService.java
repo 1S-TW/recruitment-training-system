@@ -29,7 +29,7 @@ public class HrRequestService {
                 .toList();
     }
 
-    // ✅ Phê duyệt yêu cầu
+    // ✅ Phê duyệt yêu cầu → APPROVED
     public HrRequestResponse approveRequest(Long id, String note) {
         HrRequest hrRequest = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
@@ -49,12 +49,12 @@ public class HrRequestService {
         );
     }
 
-    // ❌ Từ chối yêu cầu
+    // ❌ Từ chối yêu cầu → CANCELED
     public HrRequestResponse rejectRequest(Long id, String note) {
         HrRequest hrRequest = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
 
-        hrRequest.setStatus("REJECTED");
+        hrRequest.setStatus("CANCELED");
         hrRequest.setNote(note);
         hrRequestRepository.save(hrRequest);
 
