@@ -1,20 +1,22 @@
+// src/main/java/com/example/recruitmenttrainingsystem/controller/HrRequestController.java
 package com.example.recruitmenttrainingsystem.controller;
 
 import com.example.recruitmenttrainingsystem.dto.CreateHrRequestDto;
 import com.example.recruitmenttrainingsystem.dto.HrRequestResponse;
 import com.example.recruitmenttrainingsystem.entity.Technology;
 import com.example.recruitmenttrainingsystem.service.HrRequestService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/hr-request")
 public class HrRequestController {
+
     private final HrRequestService hrRequestService;
 
     @GetMapping
@@ -30,5 +32,11 @@ public class HrRequestController {
     @GetMapping("/technologies")
     public List<Technology> getTechnologies() {
         return hrRequestService.getTechnologies();
+    }
+
+    // MỚI: CẬP NHẬT YÊU CẦU
+    @PostMapping("/update/{id}")
+    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody CreateHrRequestDto dto) {
+        return hrRequestService.updateHrRequest(id, dto);
     }
 }
