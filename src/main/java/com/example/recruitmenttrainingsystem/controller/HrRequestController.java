@@ -31,4 +31,22 @@ public class HrRequestController {
     public List<Technology> getTechnologies() {
         return hrRequestService.getTechnologies();
     }
+
+    // ✅ API phê duyệt
+    @PutMapping("/{id}/approve")
+    public HrRequestResponse approveRequest(
+            @PathVariable Long id,
+            @RequestParam(required = false) String note
+    ) {
+        return hrRequestService.approveRequest(id, note);
+    }
+
+    // ❌ API từ chối
+    @PutMapping("/{id}/reject")
+    public HrRequestResponse rejectRequest(
+            @PathVariable Long id,
+            @RequestParam(required = false) String note
+    ) {
+        return hrRequestService.rejectRequest(id, note);
+    }
 }

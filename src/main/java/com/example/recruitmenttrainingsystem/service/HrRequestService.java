@@ -75,4 +75,44 @@ public class HrRequestService {
     public List<Technology> getTechnologies() {
         return technologyRepository.findAll();
     }
+
+    // ✅ Phê duyệt yêu cầu → APPROVED
+    public HrRequestResponse approveRequest(Long id, String note) {
+        HrRequest hrRequest = hrRequestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
+
+        hrRequest.setStatus("APPROVED");
+        hrRequest.setNote(note);
+        hrRequestRepository.save(hrRequest);
+
+        return new HrRequestResponse(
+                hrRequest.getRequestId(),
+                hrRequest.getRequestTitle(),
+                hrRequest.getStatus(),
+                hrRequest.getExpectedDeliveryDate(),
+                hrRequest.getCreatedAt(),
+                hrRequest.getNote(),
+                hrRequest.getCreatedBy().getFullName()
+        );
+    }
+
+    // ❌ Từ chối yêu cầu → CANCELED
+    public HrRequestResponse rejectRequest(Long id, String note) {
+        HrRequest hrRequest = hrRequestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
+
+        hrRequest.setStatus("CANCELED");
+        hrRequest.setNote(note);
+        hrRequestRepository.save(hrRequest);
+
+        return new HrRequestResponse(
+                hrRequest.getRequestId(),
+                hrRequest.getRequestTitle(),
+                hrRequest.getStatus(),
+                hrRequest.getExpectedDeliveryDate(),
+                hrRequest.getCreatedAt(),
+                hrRequest.getNote(),
+                hrRequest.getCreatedBy().getFullName()
+        );
+    }
 }
