@@ -8,7 +8,5 @@ import lombok.Setter;
 @Getter
 @Setter
 public class AssignRoleRequest {
-
-    @NotBlank(message = "Tên role không được để trống")
     private String roleName;
 }
