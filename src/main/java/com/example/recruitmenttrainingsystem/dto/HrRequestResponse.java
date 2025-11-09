@@ -1,37 +1,47 @@
 package com.example.recruitmenttrainingsystem.dto;
 
+import com.example.recruitmenttrainingsystem.entity.RequestStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * DTO trả về danh sách yêu cầu nhân sự
+ */
 public class HrRequestResponse {
+
     private Long requestId;
     private String requestTitle;
-    private String status;
+    private RequestStatus status;           // SỬA: Dùng enum
     private LocalDate expectedDeliveryDate;
     private LocalDateTime createdAt;
     private String note;
-    private String createdBy; // chỉ lưu tên người tạo
+    private String createdByName;           // SỬA: Đổi tên field
 
-    // Constructor
-    public HrRequestResponse(Long requestId, String requestTitle, String status,
-                             LocalDate expectedDeliveryDate, LocalDateTime createdAt,
-                             String note, String createdBy) {
+    // Constructor – PHẢI ĐÚNG THỨ TỰ + KIỂU
+    public HrRequestResponse(
+            Long requestId,
+            String requestTitle,
+            RequestStatus status,           // enum
+            LocalDate expectedDeliveryDate,
+            LocalDateTime createdAt,
+            String note,
+            String createdByName            // tên khớp với service
+    ) {
         this.requestId = requestId;
         this.requestTitle = requestTitle;
         this.status = status;
         this.expectedDeliveryDate = expectedDeliveryDate;
         this.createdAt = createdAt;
         this.note = note;
-        this.createdBy = createdBy;
+        this.createdByName = createdByName;
     }
 
-    // Getter & Setter
+    // Getters
     public Long getRequestId() { return requestId; }
     public String getRequestTitle() { return requestTitle; }
-    public String getStatus() { return status; }
+    public RequestStatus getStatus() { return status; }
     public LocalDate getExpectedDeliveryDate() { return expectedDeliveryDate; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public String getNote() { return note; }
-    public String getCreatedBy() { return createdBy; }
+    public String getCreatedByName() { return createdByName; } // tên đúng
 }
-
