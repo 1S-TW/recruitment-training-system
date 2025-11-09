@@ -1,7 +1,7 @@
 package com.example.recruitmenttrainingsystem.service;
 
 import com.example.recruitmenttrainingsystem.dto.CreateHrRequestDto;
-import com.example.recruitmenttrainingsystem.dto.HrRequestResponse; // ĐÃ THÊM
+import com.example.recruitmenttrainingsystem.dto.HrRequestResponse;
 import com.example.recruitmenttrainingsystem.entity.*;
 import com.example.recruitmenttrainingsystem.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +9,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +26,7 @@ public class HrRequestService {
                 .map(hr -> new HrRequestResponse(
                         hr.getRequestId(),
                         hr.getRequestTitle(),
-                        hr.getStatus(),
+                        hr.getStatus(),                    // String
                         hr.getExpectedDeliveryDate(),
                         hr.getCreatedAt(),
                         hr.getNote(),
@@ -48,7 +47,10 @@ public class HrRequestService {
 
         HrRequest request = new HrRequest();
         request.setRequestTitle(dto.getRequestTitle());
-        request.setStatus(RequestStatus.DANG_CHO);
+        
+        // SỬA: Dùng String thay vì enum
+        request.setStatus("DANG_CHO");  // GIỮ NGUYÊN GIÁ TRỊ CŨ
+
         request.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
         request.setNote(dto.getNote());
         request.setCreatedBy(user);

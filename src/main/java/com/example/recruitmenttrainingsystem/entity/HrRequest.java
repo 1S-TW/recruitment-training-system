@@ -17,28 +17,31 @@ public class HrRequest {
     @Column(name = "request_id")
     private Long requestId;
 
-    @Column(name = "request_title", length = 200, nullable = false)
+    @Column(name = "request_title", nullable = false, length = 60)
     private String requestTitle;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private RequestStatus status;
+    // GIỮ NGUYÊN: status là String, không dùng enum
+    @Column(name = "status", nullable = false, length = 30)
+    private String status;
 
     @Column(name = "expected_delivery_date", nullable = false)
     private LocalDate expectedDeliveryDate;
 
-    @Column(name = "note", length = 500)
+    // MỚI: createdAt tự động, nullable = false
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    // MỚI: note dài hơn
+    @Column(name = "note", length = 255)
     private String note;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;  // LocalDateTime
-
     @ManyToOne
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "created_by")
     private User createdBy;
 
+    // MỚI: Tự động set createdAt khi insert
     @PrePersist
     void setCreatedAt() {
-        this.createdAt = LocalDateTime.now(); // LocalDateTime.now()
+        this.createdAt = LocalDateTime.now();
     }
 }
