@@ -15,6 +15,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/hr-request")
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true") // ✅ thêm
 public class HrRequestController {
 
     private final HrRequestService hrRequestService;

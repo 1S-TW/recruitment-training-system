@@ -1,13 +1,22 @@
 // src/main/java/com/example/recruitmenttrainingsystem/service/HrRequestService.java
 package com.example.recruitmenttrainingsystem.service;
 
-import com.example.recruitmenttrainingsystem.dto.*;
-import com.example.recruitmenttrainingsystem.entity.*;
-import com.example.recruitmenttrainingsystem.repository.*;
+import com.example.recruitmenttrainingsystem.dto.CreateHrRequestDto;
+import com.example.recruitmenttrainingsystem.dto.HrRequestResponse;
+import com.example.recruitmenttrainingsystem.dto.TechQuantityDto;
+import com.example.recruitmenttrainingsystem.entity.HrRequest;
+import com.example.recruitmenttrainingsystem.entity.QuantityCandidate;
+import com.example.recruitmenttrainingsystem.entity.Technology;
+import com.example.recruitmenttrainingsystem.entity.User;
+import com.example.recruitmenttrainingsystem.repository.HrRequestRepository;
+import com.example.recruitmenttrainingsystem.repository.QuantityCandidateRepository;
+import com.example.recruitmenttrainingsystem.repository.TechnologyRepository;
+import com.example.recruitmenttrainingsystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +30,7 @@ public class HrRequestService {
     private final QuantityCandidateRepository quantityCandidateRepository;
     private final UserRepository userRepository;
 
-    // GIỮ NGUYÊN: LẤY DANH SÁCH YÊU CẦU
+    // LẤY DANH SÁCH YÊU CẦU
     public List<HrRequestResponse> getAllHrRequests() {
         return hrRequestRepository.findAll().stream()
                 .map(hr -> new HrRequestResponse(
@@ -31,8 +40,7 @@ public class HrRequestService {
                         hr.getExpectedDeliveryDate(),
                         hr.getCreatedAt(),
                         hr.getNote(),
-                        hr.getCreatedBy().getFullName(),
-                        // MỚI: TRẢ VỀ techQuantities
+                        hr.getCreatedBy() != null ? hr.getCreatedBy().getFullName() : null,
                         hr.getQuantityCandidates().stream()
                                 .map(qc -> new TechQuantityDto(qc.getTechnology().getId(), qc.getSoLuong()))
                                 .toList()
@@ -40,7 +48,7 @@ public class HrRequestService {
                 .toList();
     }
 
-    // GIỮ NGUYÊN: TẠO YÊU CẦU
+    // TẠO YÊU CẦU (mặc định NEW)
     public ResponseEntity<?> createHrRequest(CreateHrRequestDto dto) {
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -53,7 +61,7 @@ public class HrRequestService {
 
         HrRequest request = new HrRequest();
         request.setRequestTitle(dto.getRequestTitle());
-        request.setStatus("DANG_CHO");
+        request.setStatus("NEW"); // ✅ đặt mặc định NEW
         request.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
         request.setNote(dto.getNote());
         request.setCreatedBy(user);
@@ -73,20 +81,20 @@ public class HrRequestService {
         return ResponseEntity.ok(Map.of("message", "Yêu cầu nhân sự đã được tạo thành công!"));
     }
 
-    // GIỮ NGUYÊN: LẤY DANH SÁCH CÔNG NGHỆ
+    // LẤY DANH SÁCH CÔNG NGHỆ
     public List<Technology> getTechnologies() {
         return technologyRepository.findAll();
     }
 
-    // MỚI: CẬP NHẬT YÊU CẦU
+    // CẬP NHẬT YÊU CẦU (chỉ khi NEW)
     @Transactional
     public ResponseEntity<?> updateHrRequest(Long id, CreateHrRequestDto dto) {
         HrRequest request = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Yêu cầu không tồn tại"));
 
-        if (!"DANG_CHO".equals(request.getStatus())) {
+        if (!"NEW".equals(request.getStatus())) { // ✅ chỉ cho sửa khi NEW
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Chỉ có thể sửa yêu cầu ở trạng thái 'Đang chờ'"));
+                    .body(Map.of("error", "Chỉ có thể sửa yêu cầu ở trạng thái 'NEW'"));
         }
 
         LocalDate minDate = LocalDate.now().plusMonths(2);
