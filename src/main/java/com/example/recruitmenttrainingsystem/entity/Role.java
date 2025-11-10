@@ -1,5 +1,6 @@
 package com.example.recruitmenttrainingsystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -8,16 +9,14 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // ✅ tránh lỗi JSON
 public class Role {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // 1..5
+    private Long id;
 
     @Column(nullable = false, unique = true)
     private String roleName;
 
     private String description;
-
 }
-
