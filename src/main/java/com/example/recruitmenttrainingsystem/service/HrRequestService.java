@@ -23,15 +23,33 @@ public class HrRequestService {
 
     public List<HrRequestResponse> getAllHrRequests() {
         return hrRequestRepository.findAll().stream()
-                .map(hr -> new HrRequestResponse(
-                        hr.getRequestId(),
-                        hr.getRequestTitle(),
-                        hr.getStatus(),                    // String
-                        hr.getExpectedDeliveryDate(),
-                        hr.getCreatedAt(),
-                        hr.getNote(),
-                        hr.getCreatedBy().getFullName()
-                ))
+                .map(hr -> {
+                    int totalQuantity = quantityCandidateRepository
+                            .findByHrRequest(hr)
+                            .stream()
+                            .mapToInt(QuantityCandidate::getSoLuong)
+                            .sum();
+
+                    HrRequestResponse dto = new HrRequestResponse(
+                            hr.getRequestId(),
+                            hr.getRequestTitle(),
+                            hr.getStatus(),
+                            hr.getExpectedDeliveryDate(),
+                            hr.getCreatedAt(),
+                            hr.getNote(),
+                            hr.getCreatedBy().getFullName(),
+                            totalQuantity
+                    );
+
+                    List<String> techNames = quantityCandidateRepository.findByHrRequest(hr)
+                            .stream()
+                            .map(qc -> qc.getTechnology().getName()) // ✅ Sửa tại đây
+                            .distinct()
+                            .toList();
+
+                    dto.setTechnologies(techNames);
+                    return dto;
+                })
                 .toList();
     }
 
@@ -47,10 +65,7 @@ public class HrRequestService {
 
         HrRequest request = new HrRequest();
         request.setRequestTitle(dto.getRequestTitle());
-        
-        // SỬA: Dùng String thay vì enum
-        request.setStatus("DANG_CHO");  // GIỮ NGUYÊN GIÁ TRỊ CŨ
-
+        request.setStatus("DANG_CHO");
         request.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
         request.setNote(dto.getNote());
         request.setCreatedBy(user);
@@ -76,7 +91,6 @@ public class HrRequestService {
         return technologyRepository.findAll();
     }
 
-    // ✅ Phê duyệt yêu cầu → APPROVED
     public HrRequestResponse approveRequest(Long id, String note) {
         HrRequest hrRequest = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
@@ -85,18 +99,33 @@ public class HrRequestService {
         hrRequest.setNote(note);
         hrRequestRepository.save(hrRequest);
 
-        return new HrRequestResponse(
+        int totalQuantity = quantityCandidateRepository
+                .findByHrRequest(hrRequest)
+                .stream()
+                .mapToInt(QuantityCandidate::getSoLuong)
+                .sum();
+
+        HrRequestResponse dto = new HrRequestResponse(
                 hrRequest.getRequestId(),
                 hrRequest.getRequestTitle(),
                 hrRequest.getStatus(),
                 hrRequest.getExpectedDeliveryDate(),
                 hrRequest.getCreatedAt(),
                 hrRequest.getNote(),
-                hrRequest.getCreatedBy().getFullName()
+                hrRequest.getCreatedBy().getFullName(),
+                totalQuantity
         );
+
+        List<String> techNames = quantityCandidateRepository.findByHrRequest(hrRequest)
+                .stream()
+                .map(qc -> qc.getTechnology().getName()) // ✅ Sửa tại đây
+                .distinct()
+                .toList();
+
+        dto.setTechnologies(techNames);
+        return dto;
     }
 
-    // ❌ Từ chối yêu cầu → CANCELED
     public HrRequestResponse rejectRequest(Long id, String note) {
         HrRequest hrRequest = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
@@ -105,14 +134,30 @@ public class HrRequestService {
         hrRequest.setNote(note);
         hrRequestRepository.save(hrRequest);
 
-        return new HrRequestResponse(
+        int totalQuantity = quantityCandidateRepository
+                .findByHrRequest(hrRequest)
+                .stream()
+                .mapToInt(QuantityCandidate::getSoLuong)
+                .sum();
+
+        HrRequestResponse dto = new HrRequestResponse(
                 hrRequest.getRequestId(),
                 hrRequest.getRequestTitle(),
                 hrRequest.getStatus(),
                 hrRequest.getExpectedDeliveryDate(),
                 hrRequest.getCreatedAt(),
                 hrRequest.getNote(),
-                hrRequest.getCreatedBy().getFullName()
+                hrRequest.getCreatedBy().getFullName(),
+                totalQuantity
         );
+
+        List<String> techNames = quantityCandidateRepository.findByHrRequest(hrRequest)
+                .stream()
+                .map(qc -> qc.getTechnology().getName()) // ✅ Sửa tại đây
+                .distinct()
+                .toList();
+
+        dto.setTechnologies(techNames);
+        return dto;
     }
 }
