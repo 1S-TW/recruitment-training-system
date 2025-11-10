@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +22,7 @@ public class HrRequestService {
     private final QuantityCandidateRepository quantityCandidateRepository;
     private final UserRepository userRepository;
 
+    // ✅ Lấy tất cả yêu cầu nhân sự kèm chi tiết công nghệ và số lượng
     public List<HrRequestResponse> getAllHrRequests() {
         return hrRequestRepository.findAll().stream()
                 .map(hr -> {
@@ -41,18 +43,24 @@ public class HrRequestService {
                             totalQuantity
                     );
 
-                    List<String> techNames = quantityCandidateRepository.findByHrRequest(hr)
+                    // ✅ Danh sách chi tiết công nghệ và số lượng
+                    List<Map<String, Object>> techQuantities = quantityCandidateRepository.findByHrRequest(hr)
                             .stream()
-                            .map(qc -> qc.getTechnology().getName()) // ✅ Sửa tại đây
-                            .distinct()
+                            .map(qc -> {
+                                Map<String, Object> map = new HashMap<>();
+                                map.put("technology", qc.getTechnology().getName());
+                                map.put("quantity", qc.getSoLuong());
+                                return map;
+                            })
                             .toList();
 
-                    dto.setTechnologies(techNames);
+                    dto.setTechQuantities(techQuantities);
                     return dto;
                 })
                 .toList();
     }
 
+    // ✅ Tạo yêu cầu nhân sự
     public ResponseEntity<?> createHrRequest(CreateHrRequestDto dto) {
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -91,6 +99,7 @@ public class HrRequestService {
         return technologyRepository.findAll();
     }
 
+    // ✅ Phê duyệt yêu cầu
     public HrRequestResponse approveRequest(Long id, String note) {
         HrRequest hrRequest = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
@@ -99,33 +108,10 @@ public class HrRequestService {
         hrRequest.setNote(note);
         hrRequestRepository.save(hrRequest);
 
-        int totalQuantity = quantityCandidateRepository
-                .findByHrRequest(hrRequest)
-                .stream()
-                .mapToInt(QuantityCandidate::getSoLuong)
-                .sum();
-
-        HrRequestResponse dto = new HrRequestResponse(
-                hrRequest.getRequestId(),
-                hrRequest.getRequestTitle(),
-                hrRequest.getStatus(),
-                hrRequest.getExpectedDeliveryDate(),
-                hrRequest.getCreatedAt(),
-                hrRequest.getNote(),
-                hrRequest.getCreatedBy().getFullName(),
-                totalQuantity
-        );
-
-        List<String> techNames = quantityCandidateRepository.findByHrRequest(hrRequest)
-                .stream()
-                .map(qc -> qc.getTechnology().getName()) // ✅ Sửa tại đây
-                .distinct()
-                .toList();
-
-        dto.setTechnologies(techNames);
-        return dto;
+        return buildHrRequestResponse(hrRequest);
     }
 
+    // ✅ Từ chối yêu cầu
     public HrRequestResponse rejectRequest(Long id, String note) {
         HrRequest hrRequest = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
@@ -134,6 +120,11 @@ public class HrRequestService {
         hrRequest.setNote(note);
         hrRequestRepository.save(hrRequest);
 
+        return buildHrRequestResponse(hrRequest);
+    }
+
+    // ✅ Hàm chung để build response
+    private HrRequestResponse buildHrRequestResponse(HrRequest hrRequest) {
         int totalQuantity = quantityCandidateRepository
                 .findByHrRequest(hrRequest)
                 .stream()
@@ -151,13 +142,17 @@ public class HrRequestService {
                 totalQuantity
         );
 
-        List<String> techNames = quantityCandidateRepository.findByHrRequest(hrRequest)
+        List<Map<String, Object>> techQuantities = quantityCandidateRepository.findByHrRequest(hrRequest)
                 .stream()
-                .map(qc -> qc.getTechnology().getName()) // ✅ Sửa tại đây
-                .distinct()
+                .map(qc -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("technology", qc.getTechnology().getName());
+                    map.put("quantity", qc.getSoLuong());
+                    return map;
+                })
                 .toList();
 
-        dto.setTechnologies(techNames);
+        dto.setTechQuantities(techQuantities);
         return dto;
     }
 }

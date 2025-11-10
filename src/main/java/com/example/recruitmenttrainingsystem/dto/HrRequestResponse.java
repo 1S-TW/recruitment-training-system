@@ -3,6 +3,7 @@ package com.example.recruitmenttrainingsystem.dto;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class HrRequestResponse {
 
@@ -14,7 +15,9 @@ public class HrRequestResponse {
     private String note;
     private String createdByName;
     private Integer quantityCandidate;
-    private List<String> technologies; // ✅ Thêm trường công nghệ
+
+    // ✅ Thêm danh sách chi tiết công nghệ và số lượng
+    private List<Map<String, Object>> techQuantities;
 
     public HrRequestResponse(
             Long requestId,
@@ -45,10 +48,10 @@ public class HrRequestResponse {
     public String getNote() { return note; }
     public String getCreatedByName() { return createdByName; }
     public Integer getQuantityCandidate() { return quantityCandidate; }
-    public List<String> getTechnologies() { return technologies; }
+    public List<Map<String, Object>> getTechQuantities() { return techQuantities; }
 
-    // Setter cho công nghệ
-    public void setTechnologies(List<String> technologies) {
-        this.technologies = technologies;
+    // Setter cho danh sách chi tiết
+    public void setTechQuantities(List<Map<String, Object>> techQuantities) {
+        this.techQuantities = techQuantities;
     }
 }
