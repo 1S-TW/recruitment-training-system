@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/hr-request/**").hasAnyRole("TRUONG_BO_PHAN","SUPER_ADMIN","HR")
+                        .requestMatchers("/api/recruitment-plans/**").hasAnyRole("TRUONG_BO_PHAN","SUPER_ADMIN","HR")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
