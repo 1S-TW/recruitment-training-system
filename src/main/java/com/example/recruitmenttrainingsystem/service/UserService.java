@@ -163,10 +163,16 @@ public class UserService {
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy user với ID: " + userId));
 
-        // 2. Tìm role mới
+        // --- BẮT ĐẦU SỬA ---
         String newRoleName = request.getRoleName();
-        Role newRole = roleRepository.findByRoleName(newRoleName)
-                .orElseThrow(() -> new CustomException("Không tìm thấy role: " + newRoleName));
+        Role newRole = null; // 1. Khởi tạo role là null
+
+        // 2. Chỉ tìm role nếu newRoleName không rỗng
+        if (newRoleName != null && !newRoleName.trim().isEmpty()) {
+            newRole = roleRepository.findByRoleName(newRoleName)
+                    .orElseThrow(() -> new CustomException("Không tìm thấy role: " + newRoleName));
+        }
+        // --- KẾT THÚC SỬA ---
 
         // 3. (Rất quan trọng) Kiểm tra admin có tự đổi role của chính mình không
         User adminUser = userRepository.findByEmail(adminEmail)
@@ -177,12 +183,14 @@ public class UserService {
         }
 
         // 4. Kiểm tra xem role có thực sự thay đổi không
-        if (targetUser.getRole().getRoleName().equals(newRoleName)) {
+        String originalRoleName = (targetUser.getRole() != null) ? targetUser.getRole().getRoleName() : null;
+        if ( (originalRoleName == null && newRoleName == null) ||
+                (originalRoleName != null && originalRoleName.equals(newRoleName)) ) {
             throw new CustomException("User đã có role này rồi.");
         }
 
         // 5. Cập nhật và lưu
-        targetUser.setRole(newRole);
+        targetUser.setRole(newRole); // Gán role (có thể là null)
         userRepository.save(targetUser);
     }
 
