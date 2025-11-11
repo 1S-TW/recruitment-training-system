@@ -3,6 +3,7 @@ package com.example.recruitmenttrainingsystem.controller;
 import com.example.recruitmenttrainingsystem.dto.CreateHrRequestDto;
 import com.example.recruitmenttrainingsystem.dto.HrRequestResponse;
 import com.example.recruitmenttrainingsystem.dto.PlanDefaultsDto;
+import com.example.recruitmenttrainingsystem.dto.RejectRequestDto; // <-- THÊM IMPORT
 import com.example.recruitmenttrainingsystem.entity.Technology;
 import com.example.recruitmenttrainingsystem.service.HrRequestService;
 import lombok.RequiredArgsConstructor;
@@ -42,13 +43,14 @@ public class HrRequestController {
         return hrRequestService.approveRequest(id, note);
     }
 
-    // ❌ Từ chối
+    // ❌ Từ chối (ĐÃ CẬP NHẬT)
     @PutMapping("/{id}/reject")
     public HrRequestResponse rejectRequest(
             @PathVariable Long id,
-            @RequestParam(required = false) String note
+            @Valid @RequestBody RejectRequestDto dto // <-- THAY ĐỔI
     ) {
-        return hrRequestService.rejectRequest(id, note);
+        // Truyền lý do từ DTO vào service
+        return hrRequestService.rejectRequest(id, dto.getRejectionReason()); // <-- THAY ĐỔI
     }
 
     // ✅ Defaults để FE auto-open modal "Thêm Plan" khi có requestId

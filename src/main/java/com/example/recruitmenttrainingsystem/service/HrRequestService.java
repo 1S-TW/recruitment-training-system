@@ -118,7 +118,7 @@ public class HrRequestService {
     }
 
     @Transactional
-    public HrRequestResponse rejectRequest(Long id, String note) {
+    public HrRequestResponse rejectRequest(Long id, String rejectionReason) { // <-- ĐỔI TÊN BIẾN
         HrRequest hrRequest = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
 
@@ -127,7 +127,7 @@ public class HrRequestService {
             throw new IllegalStateException("Yêu cầu đã được phê duyệt, không thể từ chối");
         }
         hrRequest.setStatus("CANCELED");
-        hrRequest.setNote(note);
+        hrRequest.setNote(rejectionReason); // <-- LƯU LÝ DO VÀO TRƯỜNG NOTE
         hrRequestRepository.save(hrRequest);
 
         return buildHrRequestResponse(hrRequest);
