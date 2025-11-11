@@ -41,6 +41,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**")
                         .hasRole("SUPER_ADMIN") // Chỉ SUPER_ADMIN
 
+                        .requestMatchers("/api/hr-request/**").hasAnyRole("LEAD","SUPER_ADMIN","HR")
+
                         // 3. Các endpoint cho user đã đăng nhập (ví dụ: đổi mật khẩu)
                         .requestMatchers("/api/user/**")
                         .authenticated() // Bất kỳ ai đã đăng nhập
