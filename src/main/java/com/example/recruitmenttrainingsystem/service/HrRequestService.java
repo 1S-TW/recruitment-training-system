@@ -155,7 +155,7 @@ public class HrRequestService {
 
         PlanDefaultsDto dto = new PlanDefaultsDto();
         dto.setRequestId(requestId);
-        dto.setSuggestedPlanName("Plan for " + req.getRequestTitle());
+        dto.setSuggestedPlanName(req.getRequestTitle());
         dto.setStatus("DRAFT");
         dto.setRecruitmentDeadline(recruitmentDeadline);
         dto.setDeliveryDeadline(deliveryDeadline);
