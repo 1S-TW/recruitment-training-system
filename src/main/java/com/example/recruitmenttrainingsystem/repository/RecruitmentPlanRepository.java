@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan, UUID> {
+public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan, Long> {
 
     // ✅ Lọc danh sách theo trạng thái (status)
     @Query("""
