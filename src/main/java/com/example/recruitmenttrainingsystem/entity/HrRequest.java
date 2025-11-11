@@ -1,5 +1,6 @@
 package com.example.recruitmenttrainingsystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -10,7 +11,9 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // ✅ tránh vòng lặp
 public class HrRequest {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "request_id")
@@ -31,7 +34,8 @@ public class HrRequest {
     @Column(name = "note", length = 255)
     private String note;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
+    @JsonIgnoreProperties({"role", "password", "hibernateLazyInitializer", "handler"})
     private User createdBy;
 }

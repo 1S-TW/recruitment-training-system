@@ -93,7 +93,7 @@ public class UserService {
 
         String token = jwtUtil.generateToken(user.getEmail(), role);
 
-        return new LoginResponse(token, role, user.getFullName());
+        return new LoginResponse(token, role, user.getFullName(), user.getId());
     }
     // Forgot pasword
     public void forgotPassword(ForgotPasswordRequest request) {
