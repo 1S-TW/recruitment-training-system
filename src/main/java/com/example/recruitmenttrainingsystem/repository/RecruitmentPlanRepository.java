@@ -7,16 +7,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.UUID;
 
 @Repository
-public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan, UUID> {
+public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan, Long> {
 
-    // ✅ Lọc danh sách theo trạng thái (status)
+    /**
+     * ✅ Lấy danh sách kế hoạch theo trạng thái (nếu null thì lấy tất cả)
+     */
     @Query("""
         SELECT r FROM RecruitmentPlan r
-        WHERE (:status IS NULL OR r.status = :status)
+        WHERE (:status IS NULL OR :status = '' OR r.status = :status)
         ORDER BY r.createdAt DESC
     """)
-    List<RecruitmentPlan> findByStatus(@Param("status") String status);
+    List<RecruitmentPlan> findAllByStatus(@Param("status") String status);
 }

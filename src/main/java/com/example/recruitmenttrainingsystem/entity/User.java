@@ -5,6 +5,7 @@ import lombok.*;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -15,10 +16,11 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // tránh lỗi khi serialize
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // ID tự tăng
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "full_name", length = 150, nullable = false)
@@ -31,9 +33,10 @@ public class User implements UserDetails {
     private String email;
 
     @Column(name = "password", length = 255, nullable = false)
-    private String password; // Lưu mật khẩu đã mã hóa (BCrypt)
+    private String password;
 
-    @ManyToOne
+    // ✅ FETCH EAGER để tránh lỗi LazyInitializationException
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
@@ -44,7 +47,6 @@ public class User implements UserDetails {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // ================== SECURITY METHODS ==================
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.getRoleName()));
@@ -52,7 +54,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email; // Dùng email làm username đăng nhập
+        return email;
     }
 
     @Override
@@ -72,6 +74,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return status; // true = tài khoản hoạt động
+        return status;
     }
 }

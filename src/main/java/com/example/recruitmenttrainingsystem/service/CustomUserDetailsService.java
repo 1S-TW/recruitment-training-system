@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 
@@ -16,13 +17,16 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
 
     @Override
+    @Transactional(readOnly = true) // ✅ giữ session mở trong quá trình load user
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy user với email: " + email));
 
+        // ✅ In ra log để kiểm tra
         System.out.println("✅ User login detected: " + user.getEmail()
-                + " | Role: " + user.getRole().getRoleName());
+                + " | Role: " + (user.getRole() != null ? user.getRole().getRoleName() : "null"));
 
+        // ✅ Trả về UserDetails cho Spring Security
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
