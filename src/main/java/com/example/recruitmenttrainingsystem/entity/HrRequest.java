@@ -8,15 +8,14 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+// src/main/java/com/example/recruitmenttrainingsystem/entity/HrRequest.java
 @Entity
 @Table(name = "hr_request")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class HrRequest {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "request_id")
     private Long requestId;
 
@@ -29,27 +28,21 @@ public class HrRequest {
     @Column(name = "expected_delivery_date", nullable = false)
     private LocalDate expectedDeliveryDate;
 
-    @Column(name = "created_at", nullable = false)
+    // ✅ lưu DATETIME(6) để không bị cắt giờ/phút/giây
+    @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
     @Column(name = "note", length = 255)
     private String note;
 
-    @ManyToOne
-    @JoinColumn(name = "created_by")
+    @ManyToOne @JoinColumn(name = "created_by")
     private User createdBy;
 
-    // MỚI: QUAN HỆ 1-N VỚI QUANTITY CANDIDATE
     @OneToMany(mappedBy = "hrRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QuantityCandidate> quantityCandidates = new ArrayList<>();
 
     @PrePersist
     void setCreatedAt() {
-        this.createdAt = LocalDateTime.now();
-    }
-
-    // GETTER CHO quantityCandidates
-    public List<QuantityCandidate> getQuantityCandidates() {
-        return quantityCandidates;
+        if (this.createdAt == null) this.createdAt = LocalDateTime.now(); // ✅ có cả h/phút/giây
     }
 }
