@@ -1,4 +1,5 @@
 package com.example.recruitmenttrainingsystem.config;
+
 import com.example.recruitmenttrainingsystem.service.CustomUserDetailsService;
 import com.example.recruitmenttrainingsystem.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +16,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.example.recruitmenttrainingsystem.security.JwtAuthenticationFilter;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+
 @Configuration
 @RequiredArgsConstructor
 @EnableWebSecurity
 public class SecurityConfig {
+
     private final CustomUserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
     @Bean
     public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
     @Bean
@@ -29,13 +35,15 @@ public class SecurityConfig {
         authBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
         return authBuilder.build();
     }
+
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     var c = new org.springframework.web.cors.CorsConfiguration();
-                    c.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
+                    c.setAllowedOrigins(java.util.List.of("http://localhost:5174"));
                     c.setAllowedMethods(java.util.List.of("GET","POST","PUT","DELETE","OPTIONS"));
                     c.setAllowedHeaders(java.util.List.of("*"));
                     c.setAllowCredentials(true);
@@ -60,6 +68,8 @@ public class SecurityConfig {
                 );
         // ✅ Thêm JWT filter
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
+
 }

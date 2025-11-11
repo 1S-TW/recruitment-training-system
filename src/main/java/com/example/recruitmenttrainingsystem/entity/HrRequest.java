@@ -1,4 +1,3 @@
-// src/main/java/com/example/recruitmenttrainingsystem/entity/HrRequest.java
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
@@ -8,7 +7,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-// src/main/java/com/example/recruitmenttrainingsystem/entity/HrRequest.java
+// (+) thêm import
+import com.fasterxml.jackson.annotation.JsonIgnore;           // (+)
+import lombok.EqualsAndHashCode;                            // (+)
+import lombok.ToString;                                     // (+)
+
 @Entity
 @Table(name = "hr_request")
 @Data
@@ -28,7 +31,6 @@ public class HrRequest {
     @Column(name = "expected_delivery_date", nullable = false)
     private LocalDate expectedDeliveryDate;
 
-    // ✅ lưu DATETIME(6) để không bị cắt giờ/phút/giây
     @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
@@ -39,10 +41,13 @@ public class HrRequest {
     private User createdBy;
 
     @OneToMany(mappedBy = "hrRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude                       // (+) tránh đệ quy khi toString()
+    @EqualsAndHashCode.Exclude              // (+)
+    @JsonIgnore                             // (+) chặn vòng lặp khi serialize
     private List<QuantityCandidate> quantityCandidates = new ArrayList<>();
 
     @PrePersist
     void setCreatedAt() {
-        if (this.createdAt == null) this.createdAt = LocalDateTime.now(); // ✅ có cả h/phút/giây
+        if (this.createdAt == null) this.createdAt = LocalDateTime.now();
     }
 }
