@@ -2,6 +2,7 @@ package com.example.recruitmenttrainingsystem.controller;
 
 import com.example.recruitmenttrainingsystem.dto.CreateHrRequestDto;
 import com.example.recruitmenttrainingsystem.dto.HrRequestResponse;
+import com.example.recruitmenttrainingsystem.dto.PlanDefaultsDto;
 import com.example.recruitmenttrainingsystem.entity.Technology;
 import com.example.recruitmenttrainingsystem.service.HrRequestService;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ public class HrRequestController {
         return hrRequestService.getTechnologies();
     }
 
-    // ✅ API phê duyệt
+    // ✅ Phê duyệt
     @PutMapping("/{id}/approve")
     public HrRequestResponse approveRequest(
             @PathVariable Long id,
@@ -41,12 +42,18 @@ public class HrRequestController {
         return hrRequestService.approveRequest(id, note);
     }
 
-    // ❌ API từ chối
+    // ❌ Từ chối
     @PutMapping("/{id}/reject")
     public HrRequestResponse rejectRequest(
             @PathVariable Long id,
             @RequestParam(required = false) String note
     ) {
         return hrRequestService.rejectRequest(id, note);
+    }
+
+    // ✅ Defaults để FE auto-open modal "Thêm Plan" khi có requestId
+    @GetMapping("/{id}/plan-defaults")
+    public ResponseEntity<PlanDefaultsDto> getPlanDefaults(@PathVariable Long id) {
+        return ResponseEntity.ok(hrRequestService.buildPlanDefaultsFromRequest(id));
     }
 }
