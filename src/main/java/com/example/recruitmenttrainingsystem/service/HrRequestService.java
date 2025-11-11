@@ -33,8 +33,6 @@ public class HrRequestService {
     private final QuantityCandidateRepository quantityCandidateRepository;
     private final UserRepository userRepository;
 
-    // ===================== QUERY =====================
-
     @Transactional(readOnly = true)
     public List<HrRequestResponse> getAllHrRequests() {
         return hrRequestRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
@@ -50,11 +48,8 @@ public class HrRequestService {
         return toResponseWithTechs(hr);
     }
 
-    // ===================== CREATE / UPDATE =====================
-
     @Transactional
     public ResponseEntity<?> createHrRequest(CreateHrRequestDto dto) {
-        // demo: lấy user id=1 (giữ theo bạn đang test)
         User user = userRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -73,7 +68,6 @@ public class HrRequestService {
 
         HrRequest saved = hrRequestRepository.save(req);
 
-        // insert quantities
         for (var tq : dto.getTechQuantities()) {
             Technology tech = technologyRepository.findById(tq.getTechnologyId())
                     .orElseThrow(() -> new RuntimeException("Công nghệ không tồn tại: " + tq.getTechnologyId()));
@@ -112,11 +106,9 @@ public class HrRequestService {
         request.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
         request.setNote(dto.getNote());
 
-        // xóa cũ bằng orphanRemoval
         request.getQuantityCandidates().clear();
         hrRequestRepository.flush();
 
-        // add lại
         for (var tq : dto.getTechQuantities()) {
             Technology tech = technologyRepository.findById(tq.getTechnologyId())
                     .orElseThrow(() -> new RuntimeException("Công nghệ không tồn tại: " + tq.getTechnologyId()));
@@ -137,17 +129,14 @@ public class HrRequestService {
         return ResponseEntity.ok(payload);
     }
 
-    // ===================== APPROVE / REJECT =====================
-
     @Transactional
     public HrRequestResponse approveRequest(Long id, String note) {
         HrRequest req = hrRequestRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + id));
 
-        String st = req.getStatus();
-        if ("APPROVED".equalsIgnoreCase(st)) {
+        if ("APPROVED".equalsIgnoreCase(req.getStatus())) {
             // idempotent
-        } else if ("CANCELED".equalsIgnoreCase(st)) {
+        } else if ("CANCELED".equalsIgnoreCase(req.getStatus())) {
             throw new IllegalStateException("Yêu cầu đã bị từ chối, không thể phê duyệt");
         } else {
             req.setStatus("APPROVED");
@@ -172,26 +161,20 @@ public class HrRequestService {
         return toResponseWithTechs(req);
     }
 
-    // ===================== TECHNOLOGIES =====================
-
     @Transactional(readOnly = true)
     public List<Technology> getTechnologies() {
         return technologyRepository.findAll();
     }
 
-    // ===================== PLAN DEFAULTS =====================
-
+    // ===== Plan defaults: 2 tuần từ thời điểm gọi (sau khi phê duyệt) =====
     @Transactional(readOnly = true)
     public PlanDefaultsDto buildPlanDefaultsFromRequest(Long requestId) {
         HrRequest req = hrRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy yêu cầu nhân sự ID: " + requestId));
 
-        // Theo yêu cầu:
-        // - tên nhu cầu hiển thị ở modal -> suggestedPlanName
-        // - hạn tuyển dụng = hôm nay
-        // - hạn bàn giao = expectedDeliveryDate
-        var recruitmentDeadline = LocalDate.now();
-        var deliveryDeadline = req.getExpectedDeliveryDate();
+        // thời gian tuyển dụng = 2 tuần kể từ lúc FE mở modal (gọi API)
+        LocalDate recruitmentEnd = LocalDate.now().plusDays(14);
+        LocalDate deliveryDeadline = req.getExpectedDeliveryDate();
 
         List<QuantityCandidate> qcs = quantityCandidateRepository.findByHrRequest_RequestId(requestId);
         int total = qcs.stream().mapToInt(QuantityCandidate::getSoLuong).sum();
@@ -208,15 +191,13 @@ public class HrRequestService {
         dto.setRequestId(requestId);
         dto.setSuggestedPlanName(req.getRequestTitle());
         dto.setStatus("DRAFT");
-        dto.setRecruitmentDeadline(recruitmentDeadline);
-        dto.setDeliveryDeadline(deliveryDeadline);
+        dto.setRecruitmentDeadline(recruitmentEnd);   // FE suy ra ngày bắt đầu = end - 14 ngày
+        dto.setDeliveryDeadline(deliveryDeadline);    // fixed từ request
         dto.setNote(req.getNote());
         dto.setTotalCandidates(total);
         dto.setTechQuantities(techDetails);
         return dto;
     }
-
-    // ===================== MAPPERS =====================
 
     private HrRequestResponse toResponseWithTechs(HrRequest hr) {
         List<TechQuantityDto> techs = quantityCandidateRepository.findByHrRequest_RequestId(hr.getRequestId())
