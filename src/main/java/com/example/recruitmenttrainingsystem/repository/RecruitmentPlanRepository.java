@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan, Long> {
@@ -20,4 +21,7 @@ public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan
         ORDER BY r.createdAt DESC
     """)
     List<RecruitmentPlan> findAllByStatus(@Param("status") String status);
+
+    // Kiểm tra/ lấy Plan theo requestId (One-to-One)
+    Optional<RecruitmentPlan> findByRequest_RequestId(Long requestId);
 }

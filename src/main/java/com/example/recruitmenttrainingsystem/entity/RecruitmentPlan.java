@@ -5,6 +5,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
+
+// (+)
+import com.fasterxml.jackson.annotation.JsonIgnore;      // (+)
+import lombok.EqualsAndHashCode;                        // (+)
+import lombok.ToString;                                 // (+)
 
 @Entity
 @Table(name = "recruitment_plan")
@@ -23,6 +29,8 @@ public class RecruitmentPlan {
     // ✅ Liên kết 1-1 với HrRequest
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", referencedColumnName = "request_id", nullable = false, unique = true)
+    @ToString.Exclude                   // (+)
+    @EqualsAndHashCode.Exclude          // (+)
     @JsonIgnoreProperties({"createdBy", "hibernateLazyInitializer", "handler"})
     private HrRequest request;
 

@@ -1,21 +1,24 @@
 package com.example.recruitmenttrainingsystem.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+// (+) thêm import
+import com.fasterxml.jackson.annotation.JsonIgnore;           // (+)
+import lombok.EqualsAndHashCode;                            // (+)
+import lombok.ToString;                                     // (+)
 
 @Entity
 @Table(name = "hr_request")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // ✅ tránh vòng lặp
 public class HrRequest {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "request_id")
     private Long requestId;
 
@@ -28,14 +31,23 @@ public class HrRequest {
     @Column(name = "expected_delivery_date", nullable = false)
     private LocalDate expectedDeliveryDate;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
     @Column(name = "note", length = 255)
     private String note;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    @JsonIgnoreProperties({"role", "password", "hibernateLazyInitializer", "handler"})
+    @ManyToOne @JoinColumn(name = "created_by")
     private User createdBy;
+
+    @OneToMany(mappedBy = "hrRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude                       // (+) tránh đệ quy khi toString()
+    @EqualsAndHashCode.Exclude              // (+)
+    @JsonIgnore                             // (+) chặn vòng lặp khi serialize
+    private List<QuantityCandidate> quantityCandidates = new ArrayList<>();
+
+    @PrePersist
+    void setCreatedAt() {
+        if (this.createdAt == null) this.createdAt = LocalDateTime.now();
+    }
 }
