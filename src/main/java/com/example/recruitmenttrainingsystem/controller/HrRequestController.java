@@ -1,19 +1,22 @@
+// src/main/java/com/example/recruitmenttrainingsystem/controller/HrRequestController.java
 package com.example.recruitmenttrainingsystem.controller;
 
-
+import com.example.recruitmenttrainingsystem.dto.CreateHrRequestDto;
 import com.example.recruitmenttrainingsystem.dto.HrRequestResponse;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam; // <-- IMPORT MỚI CẦN THIẾT
+import com.example.recruitmenttrainingsystem.dto.PlanDefaultsDto;
+import com.example.recruitmenttrainingsystem.entity.Technology;
 import com.example.recruitmenttrainingsystem.service.HrRequestService;
-// import com.example.recruitmenttrainingsystem.entity.HrRequest; // (Import này không được sử dụng, có thể xóa)
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/hr-request")
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class HrRequestController {
 
     private final HrRequestService hrRequestService;
@@ -22,18 +25,41 @@ public class HrRequestController {
     public List<HrRequestResponse> getAllHrRequests() {
         return hrRequestService.getAllHrRequests();
     }
-    /**
-     * Endpoint MỚI: Tìm kiếm động theo tiêu đề và/hoặc trạng thái
-     * URL: GET /api/hr-request/search?title=...&status=...
-     * * @param title  (Tùy chọn) Tên tiêu đề để tìm kiếm (LIKE)
-     * @param status (Tùy chọn) Trạng thái để lọc (EQUAL)
-     * @return Danh sách các request phù hợp
-     */
-    @GetMapping("/search")
-    public List<HrRequestResponse> searchHrRequests(
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String status
-    ) {
-        return hrRequestService.searchHrRequests(title, status);
+
+    @GetMapping("/{id}")
+    public HrRequestResponse getById(@PathVariable Long id) {
+        return hrRequestService.getById(id);
+    }
+
+    @PostMapping("/create")
+    public ResponseEntity<?> create(@Valid @RequestBody CreateHrRequestDto dto) {
+        return hrRequestService.createHrRequest(dto);
+    }
+
+    @PostMapping("/update/{id}")
+    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody CreateHrRequestDto dto) {
+        return hrRequestService.updateHrRequest(id, dto);
+    }
+
+    @PutMapping("/{id}/approve")
+    public HrRequestResponse approveRequest(@PathVariable Long id,
+                                            @RequestParam(required = false) String note) {
+        return hrRequestService.approveRequest(id, note);
+    }
+
+    @PutMapping("/{id}/reject")
+    public HrRequestResponse rejectRequest(@PathVariable Long id,
+                                           @RequestParam(required = false) String note) {
+        return hrRequestService.rejectRequest(id, note);
+    }
+
+    @GetMapping("/technologies")
+    public List<Technology> getTechnologies() {
+        return hrRequestService.getTechnologies();
+    }
+
+    @GetMapping("/{id}/plan-defaults")
+    public ResponseEntity<PlanDefaultsDto> getPlanDefaults(@PathVariable Long id) {
+        return ResponseEntity.ok(hrRequestService.buildPlanDefaultsFromRequest(id));
     }
 }
