@@ -1,43 +1,46 @@
 package com.example.recruitmenttrainingsystem.controller;
 
 import com.example.recruitmenttrainingsystem.dto.*;
-import com.example.recruitmenttrainingsystem.security.JwtUtil;
+import com.example.recruitmenttrainingsystem.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.*;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
+    private final UserService userService;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+        userService.register(request);
+        return ResponseEntity.ok("Đăng ký thành công. Vui lòng kiểm tra email để xác thực.");
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<?> verify(@RequestParam String token) {
+        userService.verifyEmail(token);
+        return ResponseEntity.ok("Xác thực email thành công. Bạn có thể đăng nhập.");
+    }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req) {
+        return ResponseEntity.ok(userService.login(req));
+    }
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgot(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request);
+        return ResponseEntity.ok("Đã gửi email khôi phục mật khẩu.");
+    }
 
-            String token = jwtUtil.generateToken(request.getEmail());
-            return ResponseEntity.ok(new LoginResponse(token));
-
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Email hoặc mật khẩu không đúng"));
-        } catch (DisabledException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Tài khoản đã bị vô hiệu hóa"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Đã xảy ra lỗi trong quá trình đăng nhập"));
-        }
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> reset(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+        return ResponseEntity.ok("Đổi mật khẩu thành công.");
     }
 
 }

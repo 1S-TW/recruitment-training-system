@@ -2,76 +2,41 @@ package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-
-import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
+import java.time.Instant;
+import java.util.UUID;
 
 @Entity
-@Table(name = "user")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class User implements UserDetails {
+@Table(name = "users")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // ID tự tăng
-    private Long id;
+    @GeneratedValue
+    @Column(name = "user_id", columnDefinition = "BINARY(16)")
+    private UUID id;
 
-    @Column(name = "full_name", length = 150, nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id")
+    private Role role;
+
+    @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
+
+    @Column(nullable = false, length = 150, unique = true)
+    private String email;
 
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    @Column(name = "email", length = 150, nullable = false, unique = true)
-    private String email;
-
-    @Column(name = "password", length = 255, nullable = false)
-    private String password; // Lưu mật khẩu đã mã hóa (BCrypt)
-
-    @ManyToOne
-    @JoinColumn(name = "role_id", nullable = false)
-    private Role role;
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
 
     @Column(name = "status", nullable = false)
     private boolean status;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    // ================== SECURITY METHODS ==================
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.getRoleName()));
-    }
-
-    @Override
-    public String getUsername() {
-        return email; // Dùng email làm username đăng nhập
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return status; // true = tài khoản hoạt động
-    }
+    private Instant createdAt;
 }

@@ -23,13 +23,15 @@ public class CustomUserDetailsService implements UserDetailsService {
         System.out.println("✅ User login detected: " + user.getEmail()
                 + " | Role: " + user.getRole().getRoleName());
 
+        boolean enabled = user.isStatus() && user.isEmailVerified(); // ✅ active & email verified
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                user.getPassword(),
-                user.isEnabled(),
-                true,
-                true,
-                true,
+                user.getPasswordHash(),   // ✅ dùng passwordHash
+                enabled,                  // ✅ isEnabled()
+                true,                     // accountNonExpired
+                true,                     // credentialsNonExpired
+                true,                     // accountNonLocked
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName()))
         );
     }

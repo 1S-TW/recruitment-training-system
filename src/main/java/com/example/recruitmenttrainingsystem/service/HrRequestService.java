@@ -19,6 +19,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// ✅ thêm import này
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -50,8 +53,11 @@ public class HrRequestService {
 
     @Transactional
     public ResponseEntity<?> createHrRequest(CreateHrRequestDto dto) {
-        User user = userRepository.findById(1L)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // ❌ BỎ: User user = userRepository.findById(1L) ...
+        // ✅ LẤY USER TỪ SECURITY CONTEXT (email trong JWT)
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
         LocalDate minDate = LocalDate.now().plusMonths(2);
         if (dto.getExpectedDeliveryDate().isBefore(minDate)) {

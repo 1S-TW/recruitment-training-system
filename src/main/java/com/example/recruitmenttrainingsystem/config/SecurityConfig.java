@@ -1,7 +1,7 @@
 package com.example.recruitmenttrainingsystem.config;
 
+import com.example.recruitmenttrainingsystem.security.JwtFilter;
 import com.example.recruitmenttrainingsystem.service.CustomUserDetailsService;
-import com.example.recruitmenttrainingsystem.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,8 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import com.example.recruitmenttrainingsystem.security.JwtAuthenticationFilter;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 
 @Configuration
 @RequiredArgsConstructor
@@ -25,10 +23,13 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtFilter jwtFilter;  // ✅ dùng JwtFilter, không dùng JwtAuthenticationFilter
 
     @Bean
-    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
@@ -36,40 +37,44 @@ public class SecurityConfig {
         return authBuilder.build();
     }
 
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     var c = new org.springframework.web.cors.CorsConfiguration();
-                    c.setAllowedOrigins(java.util.List.of("http://localhost:5174"));
-                    c.setAllowedMethods(java.util.List.of("GET","POST","PUT","DELETE","OPTIONS"));
+                    c.setAllowedOrigins(java.util.List.of("http://localhost:5173")); // frontend port 5173
+                    c.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     c.setAllowedHeaders(java.util.List.of("*"));
                     c.setAllowCredentials(true);
-                    // có thể thêm expose nếu cần: c.setExposedHeaders(List.of("Authorization"));
                     return c;
                 }))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ Cho phép toàn bộ preflight
+                        // Cho phép OPTIONS cho CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // ✅ Public
+
+                        // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
-                        // ✅ Business endpoints (yêu cầu role) — tách riêng từng method
+                        .requestMatchers("/error").permitAll()
+
+                        // Business endpoints (HR Request)
                         .requestMatchers(HttpMethod.GET, "/api/hr-request/**")
-                        .hasAnyRole("TRUONG_BO_PHAN","SUPER_ADMIN","HR")
+                        .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
+
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/create")
-                        .hasAnyRole("TRUONG_BO_PHAN","SUPER_ADMIN","HR")
+                        .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
+
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/update/**")
-                        .hasAnyRole("TRUONG_BO_PHAN","SUPER_ADMIN","HR")
-                        // cái khác
+                        .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
+
+                        // Các API khác yêu cầu đăng nhập
                         .anyRequest().authenticated()
                 );
-        // ✅ Thêm JWT filter
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // ✅ Gắn JwtFilter vào filter chain
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 }

@@ -3,7 +3,10 @@ package com.example.recruitmenttrainingsystem.repository;
 import com.example.recruitmenttrainingsystem.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
-
-public interface UserRepository extends JpaRepository<User, Long> {
+import java.util.UUID;
+import java.util.List;
+public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
+    boolean existsByEmail(String email);
+    List<User> findByEmailVerifiedTrueAndRoleIsNull();
 }
