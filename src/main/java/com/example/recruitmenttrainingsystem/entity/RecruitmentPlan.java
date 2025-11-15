@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/entity/RecruitmentPlan.java
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
@@ -6,10 +7,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-// (+)
-import com.fasterxml.jackson.annotation.JsonIgnore;      // (+)
-import lombok.EqualsAndHashCode;                        // (+)
-import lombok.ToString;                                 // (+)
+// (+) giữ ToString/Equals exclude, KHÔNG cần JsonIgnore nữa
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Entity
 @Table(name = "recruitment_plan")
@@ -26,10 +26,9 @@ public class RecruitmentPlan {
 
     @OneToOne
     @JoinColumn(name = "request_id", referencedColumnName = "request_id", nullable = false, unique = true)
-    @ToString.Exclude                   // (+)
-    @EqualsAndHashCode.Exclude          // (+)
-    @JsonIgnore                         // (+) tránh serialize vòng 1–1 quay lại HrRequest
-    private HrRequest request;
+    @ToString.Exclude                   // tránh đệ quy khi toString()
+    @EqualsAndHashCode.Exclude          // tránh vòng lặp equals/hashCode
+    private HrRequest request;          // ❌ không @JsonIgnore nữa để FE đọc được createdBy
 
     @Column(name = "plan_name", nullable = false, length = 60)
     private String planName;
