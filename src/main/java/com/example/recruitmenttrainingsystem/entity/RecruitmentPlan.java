@@ -1,15 +1,17 @@
-// src/main/java/com/example/recruitmenttrainingsystem/entity/RecruitmentPlan.java
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-// (+) giữ ToString/Equals exclude, KHÔNG cần JsonIgnore nữa
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "recruitment_plan")
@@ -25,10 +27,15 @@ public class RecruitmentPlan {
     private Long recruitmentPlanId;
 
     @OneToOne
-    @JoinColumn(name = "request_id", referencedColumnName = "request_id", nullable = false, unique = true)
-    @ToString.Exclude                   // tránh đệ quy khi toString()
-    @EqualsAndHashCode.Exclude          // tránh vòng lặp equals/hashCode
-    private HrRequest request;          // ❌ không @JsonIgnore nữa để FE đọc được createdBy
+    @JoinColumn(
+            name = "request_id",
+            referencedColumnName = "request_id",
+            nullable = false,
+            unique = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private HrRequest request;
 
     @Column(name = "plan_name", nullable = false, length = 60)
     private String planName;
@@ -47,4 +54,14 @@ public class RecruitmentPlan {
 
     @Column(name = "note", length = 255)
     private String note;
+
+    // ===== Quan hệ 1–N với Candidate =====
+    @OneToMany(
+            mappedBy = "recruitmentPlan",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Candidate> candidates = new ArrayList<>();
 }

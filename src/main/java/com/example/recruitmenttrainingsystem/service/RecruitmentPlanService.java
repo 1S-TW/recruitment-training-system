@@ -2,6 +2,7 @@ package com.example.recruitmenttrainingsystem.service;
 
 import com.example.recruitmenttrainingsystem.dto.RecruitmentPlanResponse;
 import com.example.recruitmenttrainingsystem.dto.CreateRecruitmentPlanDto;
+import com.example.recruitmenttrainingsystem.dto.PlanOptionDto;
 import com.example.recruitmenttrainingsystem.entity.HrRequest;
 import com.example.recruitmenttrainingsystem.entity.QuantityCandidate;
 import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
@@ -145,5 +146,23 @@ public class RecruitmentPlanService {
                 qc.getSoLuong(),
                 techDto
         );
+    }
+
+    // ================== HÀM MỚI – DÙNG CHO DROPDOWN ỨNG VIÊN ==================
+
+    /**
+     * Lấy danh sách kế hoạch đã được CONFIRMED để hiển thị ở dropdown
+     * "Kế hoạch tuyển dụng" trong màn Quản lý ứng viên.
+     * (FE sẽ hiển thị label "Đã xác nhận".)
+     */
+    @Transactional(readOnly = true)
+    public List<PlanOptionDto> getApprovedPlansForDropdown() {
+        // Status trong DB là CONFIRMED
+        List<RecruitmentPlan> plans =
+                recruitmentPlanRepository.findByStatusIgnoreCaseOrderByCreatedAtDesc("CONFIRMED");
+
+        return plans.stream()
+                .map(p -> new PlanOptionDto(p.getRecruitmentPlanId(), p.getPlanName()))
+                .toList();
     }
 }

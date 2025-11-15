@@ -1,6 +1,7 @@
 package com.example.recruitmenttrainingsystem.controller;
 
 import com.example.recruitmenttrainingsystem.dto.CreateRecruitmentPlanDto;
+import com.example.recruitmenttrainingsystem.dto.PlanOptionDto;
 import com.example.recruitmenttrainingsystem.dto.RecruitmentPlanResponse;
 import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
 import com.example.recruitmenttrainingsystem.service.RecruitmentPlanService;
@@ -51,5 +52,12 @@ public class RecruitmentPlanController {
         String reason = body.getOrDefault("rejectionReason", "");
         RecruitmentPlanResponse updated = recruitmentPlanService.rejectPlan(id, reason);
         return ResponseEntity.ok(updated);
+    }
+
+    // ✅ MỚI: lấy danh sách kế hoạch đã CONFIRMED cho dropdown "Quản lý ứng viên"
+    // FE đang gọi: GET /api/recruitment-plans/approved
+    @GetMapping("/approved")
+    public ResponseEntity<List<PlanOptionDto>> getApprovedPlans() {
+        return ResponseEntity.ok(recruitmentPlanService.getApprovedPlansForDropdown());
     }
 }
