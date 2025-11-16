@@ -7,7 +7,8 @@ import com.example.recruitmenttrainingsystem.service.CandidateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.recruitmenttrainingsystem.dto.CreateCandidateDto;
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -29,5 +30,12 @@ public class CandidateController {
             @PathVariable Long id
     ) {
         return ResponseEntity.ok(candidateService.getReviewsByCandidate(id));
+    }
+    @PostMapping("/create")
+    public ResponseEntity<CandidateListDto> createCandidate(
+            @Valid @RequestBody CreateCandidateDto dto
+    ) {
+        CandidateListDto newCandidate = candidateService.createCandidate(dto);
+        return ResponseEntity.ok(newCandidate);
     }
 }
