@@ -8,14 +8,15 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.List;
 
 public interface CandidateRepository extends JpaRepository<Candidate, Long> {
 
     // Lọc theo foreign key recruitment_plan_id
     List<Candidate> findByRecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
+
     // Kiểm tra xem email đã tồn tại trong 1 plan cụ thể chưa
     boolean existsByEmailAndRecruitmentPlan_RecruitmentPlanId(String email, Long planId);
+
     @Query("SELECT c FROM Candidate c " +
             "LEFT JOIN FETCH c.recruitmentPlan p " +
             "LEFT JOIN FETCH p.request r " +
@@ -23,4 +24,11 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
             "LEFT JOIN FETCH qc.technology " +
             "WHERE c.candidateId = :candidateId")
     Optional<Candidate> findByIdWithPlanAndRequestDetails(@Param("candidateId") Long candidateId);
+
+    // 👉 THÊM MỚI: dùng cho màn Quản lý đào tạo
+    // Lấy các ứng viên có kết quả cuối cùng = PASS và trạng thái = Đã nhận việc
+    List<Candidate> findByFinalResultIgnoreCaseAndStatusIgnoreCase(
+            String finalResult,
+            String status
+    );
 }
