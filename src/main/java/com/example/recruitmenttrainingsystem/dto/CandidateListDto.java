@@ -16,7 +16,7 @@ public class CandidateListDto {
     private String fullName;
     private String email;
     private String phoneNumber;
-
+    private String cvLink;
     private BigDecimal testScore;
     private BigDecimal interviewScore;
 
