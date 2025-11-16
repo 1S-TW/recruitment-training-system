@@ -1,10 +1,16 @@
 package com.example.recruitmenttrainingsystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+// (+)
+import com.fasterxml.jackson.annotation.JsonIgnore;      // (+)
+import lombok.EqualsAndHashCode;                        // (+)
+import lombok.ToString;                                 // (+)
 
 @Entity
 @Table(name = "recruitment_plan")
@@ -12,6 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // ✅ tránh vòng lặp JSON
 public class RecruitmentPlan {
 
     @Id
@@ -19,9 +26,12 @@ public class RecruitmentPlan {
     @Column(name = "recruitment_plan_id")
     private Long recruitmentPlanId;
 
-    // ✅ Khóa ngoại liên kết với HrRequest
-    @OneToOne
+    // ✅ Liên kết 1-1 với HrRequest
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", referencedColumnName = "request_id", nullable = false, unique = true)
+    @ToString.Exclude                   // (+)
+    @EqualsAndHashCode.Exclude          // (+)
+    @JsonIgnoreProperties({"createdBy", "hibernateLazyInitializer", "handler"})
     private HrRequest request;
 
     @Column(name = "plan_name", nullable = false, length = 60)

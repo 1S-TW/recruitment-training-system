@@ -1,11 +1,13 @@
 package com.example.recruitmenttrainingsystem.controller;
 
+import com.example.recruitmenttrainingsystem.dto.CreateRecruitmentPlanDto;
 import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
 import com.example.recruitmenttrainingsystem.service.RecruitmentPlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -17,11 +19,15 @@ public class RecruitmentPlanController {
 
     private final RecruitmentPlanService recruitmentPlanService;
 
-    // ✅ Lấy danh sách kế hoạch (có thể lọc theo status)
+    /**
+     * ✅ API: Lấy danh sách kế hoạch tuyển dụng (có thể lọc theo trạng thái)
+     * Ví dụ: /api/recruitment-plans?status=PENDING
+     */
     @GetMapping
     public ResponseEntity<List<RecruitmentPlan>> getAllPlans(
             @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(recruitmentPlanService.getAllPlans(status));
+        List<RecruitmentPlan> plans = recruitmentPlanService.getAllPlans(status);
+        return ResponseEntity.ok(plans);
     }
     @PostMapping("/{id}/reject")
     public ResponseEntity<?> rejectPlan(
@@ -35,5 +41,12 @@ public class RecruitmentPlanController {
 
         return recruitmentPlanService.rejectPlan(id, rejectionReason);
     }
-   }
 
+
+    // ✅ Tạo plan (gắn với requestId)
+    @PostMapping
+    public ResponseEntity<RecruitmentPlan> createPlan(@Valid @RequestBody CreateRecruitmentPlanDto dto) {
+        RecruitmentPlan plan = recruitmentPlanService.createPlan(dto);
+        return ResponseEntity.ok(plan);
+    }
+}
