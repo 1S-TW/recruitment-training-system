@@ -18,7 +18,9 @@ import lombok.ToString;                                     // (+)
 @NoArgsConstructor
 @AllArgsConstructor
 public class HrRequest {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "request_id")
     private Long requestId;
 
@@ -49,5 +51,10 @@ public class HrRequest {
     @PrePersist
     void setCreatedAt() {
         if (this.createdAt == null) this.createdAt = LocalDateTime.now();
+    }
+
+    // GETTER CHO quantityCandidates
+    public List<QuantityCandidate> getQuantityCandidates() {
+        return quantityCandidates;
     }
 }
