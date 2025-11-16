@@ -183,6 +183,7 @@ public class CandidateService {
                 .email(c.getEmail())
                 .phoneNumber(c.getPhoneNumber())
                 .cvLink(c.getCvLink())
+                .interviewDate(c.getInterviewDate())
                 .testScore(testScore)
                 .interviewScore(interviewScore)
                 .status(status)

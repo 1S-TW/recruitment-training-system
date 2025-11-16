@@ -2,7 +2,7 @@
 package com.example.recruitmenttrainingsystem.dto;
 
 import lombok.*;
-
+import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 @Getter
@@ -17,6 +17,7 @@ public class CandidateListDto {
     private String email;
     private String phoneNumber;
     private String cvLink;
+    private LocalDateTime interviewDate;
     private BigDecimal testScore;
     private BigDecimal interviewScore;
 
