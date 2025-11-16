@@ -4,7 +4,6 @@ import com.example.recruitmenttrainingsystem.entity.User;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -13,9 +12,8 @@ public class UserManagementDTO {
     private UUID id;
     private String fullName;
     private String email;
-    private String currentRoleName;
-    private boolean status;
-    private Instant createdAt;
+    private String currentRoleName; // <-- Trường mới để hiển thị role
+
     // Constructor để chuyển từ Entity -> DTO
     public UserManagementDTO(User user) {
         this.id = user.getId();
@@ -28,7 +26,5 @@ public class UserManagementDTO {
         } else {
             this.currentRoleName = null; // Hoặc "Chưa gán"
         }
-        this.status = user.isStatus();
-        this.createdAt = user.getCreatedAt();
     }
 }

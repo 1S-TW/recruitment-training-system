@@ -1,6 +1,8 @@
 package com.example.recruitmenttrainingsystem.controller;
 
 import com.example.recruitmenttrainingsystem.dto.CreateRecruitmentPlanDto;
+import com.example.recruitmenttrainingsystem.dto.PlanOptionDto;
+import com.example.recruitmenttrainingsystem.dto.RecruitmentPlanResponse;
 import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
 import com.example.recruitmenttrainingsystem.service.RecruitmentPlanService;
 import lombok.RequiredArgsConstructor;
@@ -10,43 +12,52 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/recruitment-plans")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "http://localhost:5173")
 public class RecruitmentPlanController {
 
     private final RecruitmentPlanService recruitmentPlanService;
 
-    /**
-     * ✅ API: Lấy danh sách kế hoạch tuyển dụng (có thể lọc theo trạng thái)
-     * Ví dụ: /api/recruitment-plans?status=PENDING
-     */
+    // ✅ Lấy danh sách kế hoạch (DTO, có request + quantityCandidates + technology)
     @GetMapping
-    public ResponseEntity<List<RecruitmentPlan>> getAllPlans(
+    public ResponseEntity<List<RecruitmentPlanResponse>> getAllPlans(
             @RequestParam(required = false) String status) {
-        List<RecruitmentPlan> plans = recruitmentPlanService.getAllPlans(status);
-        return ResponseEntity.ok(plans);
-    }
-    @PostMapping("/{id}/reject")
-    public ResponseEntity<?> rejectPlan(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> payload) {
-
-        String rejectionReason = payload.get("rejectionReason");
-        if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Lý do từ chối không được để trống."));
-        }
-
-        return recruitmentPlanService.rejectPlan(id, rejectionReason);
+        return ResponseEntity.ok(recruitmentPlanService.getAllPlans(status));
     }
 
-
-    // ✅ Tạo plan (gắn với requestId)
+    // ✅ Tạo plan (FE không dùng response chi tiết, nên vẫn trả entity)
     @PostMapping
-    public ResponseEntity<RecruitmentPlan> createPlan(@Valid @RequestBody CreateRecruitmentPlanDto dto) {
+    public ResponseEntity<RecruitmentPlan> createPlan(
+            @Valid @RequestBody CreateRecruitmentPlanDto dto) {
         RecruitmentPlan plan = recruitmentPlanService.createPlan(dto);
         return ResponseEntity.ok(plan);
+    }
+
+    // ✅ PHÊ DUYỆT kế hoạch → CONFIRMED
+    @PutMapping("/{id}/confirm")
+    public ResponseEntity<RecruitmentPlanResponse> confirmPlan(@PathVariable Long id) {
+        RecruitmentPlanResponse updated = recruitmentPlanService.confirmPlan(id);
+        return ResponseEntity.ok(updated);
+    }
+
+    // ✅ TỪ CHỐI kế hoạch → REJECTED + lưu lý do
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<RecruitmentPlanResponse> rejectPlan(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String reason = body.getOrDefault("rejectionReason", "");
+        RecruitmentPlanResponse updated = recruitmentPlanService.rejectPlan(id, reason);
+        return ResponseEntity.ok(updated);
+    }
+
+    // ✅ MỚI: lấy danh sách kế hoạch đã CONFIRMED cho dropdown "Quản lý ứng viên"
+    // FE đang gọi: GET /api/recruitment-plans/approved
+    @GetMapping("/approved")
+    public ResponseEntity<List<PlanOptionDto>> getApprovedPlans() {
+        return ResponseEntity.ok(recruitmentPlanService.getApprovedPlansForDropdown());
     }
 }

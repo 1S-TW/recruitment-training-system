@@ -1,3 +1,4 @@
+
 package com.example.recruitmenttrainingsystem.dto;
 
 import jakarta.validation.constraints.*;

@@ -1,16 +1,17 @@
 package com.example.recruitmenttrainingsystem.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.UUID;
-
-// (+)
-import com.fasterxml.jackson.annotation.JsonIgnore;      // (+)
-import lombok.EqualsAndHashCode;                        // (+)
-import lombok.ToString;                                 // (+)
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "recruitment_plan")
@@ -18,7 +19,6 @@ import lombok.ToString;                                 // (+)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // ✅ tránh vòng lặp JSON
 public class RecruitmentPlan {
 
     @Id
@@ -26,12 +26,15 @@ public class RecruitmentPlan {
     @Column(name = "recruitment_plan_id")
     private Long recruitmentPlanId;
 
-    // ✅ Liên kết 1-1 với HrRequest
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "request_id", referencedColumnName = "request_id", nullable = false, unique = true)
-    @ToString.Exclude                   // (+)
-    @EqualsAndHashCode.Exclude          // (+)
-    @JsonIgnoreProperties({"createdBy", "hibernateLazyInitializer", "handler"})
+    @OneToOne
+    @JoinColumn(
+            name = "request_id",
+            referencedColumnName = "request_id",
+            nullable = false,
+            unique = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private HrRequest request;
 
     @Column(name = "plan_name", nullable = false, length = 60)
@@ -51,4 +54,14 @@ public class RecruitmentPlan {
 
     @Column(name = "note", length = 255)
     private String note;
+
+    // ===== Quan hệ 1–N với Candidate =====
+    @OneToMany(
+            mappedBy = "recruitmentPlan",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Candidate> candidates = new ArrayList<>();
 }

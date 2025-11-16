@@ -8,7 +8,7 @@ import com.example.recruitmenttrainingsystem.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import java.util.Optional;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -93,7 +93,7 @@ public class UserService {
 
         String token = jwtUtil.generateToken(user.getEmail(), role);
 
-        return new LoginResponse(token, role, user.getFullName(), user.getId());
+        return new LoginResponse(token, role, user.getFullName(),user.getId());
     }
     // Forgot pasword
     public void forgotPassword(ForgotPasswordRequest request) {
@@ -163,16 +163,10 @@ public class UserService {
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy user với ID: " + userId));
 
-        // --- BẮT ĐẦU SỬA ---
+        // 2. Tìm role mới
         String newRoleName = request.getRoleName();
-        Role newRole = null; // 1. Khởi tạo role là null
-
-        // 2. Chỉ tìm role nếu newRoleName không rỗng
-        if (newRoleName != null && !newRoleName.trim().isEmpty()) {
-            newRole = roleRepository.findByRoleName(newRoleName)
-                    .orElseThrow(() -> new CustomException("Không tìm thấy role: " + newRoleName));
-        }
-        // --- KẾT THÚC SỬA ---
+        Role newRole = roleRepository.findByRoleName(newRoleName)
+                .orElseThrow(() -> new CustomException("Không tìm thấy role: " + newRoleName));
 
         // 3. (Rất quan trọng) Kiểm tra admin có tự đổi role của chính mình không
         User adminUser = userRepository.findByEmail(adminEmail)
@@ -183,14 +177,12 @@ public class UserService {
         }
 
         // 4. Kiểm tra xem role có thực sự thay đổi không
-        String originalRoleName = (targetUser.getRole() != null) ? targetUser.getRole().getRoleName() : null;
-        if ( (originalRoleName == null && newRoleName == null) ||
-                (originalRoleName != null && originalRoleName.equals(newRoleName)) ) {
+        if (targetUser.getRole().getRoleName().equals(newRoleName)) {
             throw new CustomException("User đã có role này rồi.");
         }
 
         // 5. Cập nhật và lưu
-        targetUser.setRole(newRole); // Gán role (có thể là null)
+        targetUser.setRole(newRole);
         userRepository.save(targetUser);
     }
 
