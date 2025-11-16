@@ -4,6 +4,7 @@ import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
 import com.example.recruitmenttrainingsystem.repository.HrRequestRepository;
 import com.example.recruitmenttrainingsystem.repository.RecruitmentPlanRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import com.example.recruitmenttrainingsystem.dto.CreateRecruitmentPlanDto;
 import com.example.recruitmenttrainingsystem.entity.HrRequest;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime; // ⬅️ thêm import
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +21,29 @@ public class RecruitmentPlanService {
     private final RecruitmentPlanRepository recruitmentPlanRepository;
     private final HrRequestRepository hrRequestRepository;
 
+    @Transactional
+    public ResponseEntity<?> rejectPlan(Long planId, String rejectionReason) {
+        RecruitmentPlan plan = recruitmentPlanRepository.findById(planId)
+                .orElseThrow(() -> new RuntimeException("Kế hoạch không tồn tại với ID: " + planId));
+
+        if (!"PENDING".equals(plan.getStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Chỉ có thể từ chối kế hoạch đang ở trạng thái PENDING."));
+        }
+
+        plan.setStatus("CANCELED");
+
+        // ✅ GÁN LÝ DO VÀO TRƯỜNG NOTE
+        plan.setNote(rejectionReason);
+
+        // Cần cập nhật trạng thái của HrRequest (nếu cần)
+        if (plan.getRequest() != null) {
+            plan.getRequest().setStatus("CANCELED");
+        }
+
+        recruitmentPlanRepository.save(plan);
+
+        return ResponseEntity.ok(Map.of("message", "Kế hoạch tuyển dụng đã bị từ chối."));
+    }
     /**
      * ✅ Lấy danh sách kế hoạch tuyển dụng (lọc theo trạng thái nếu có)
      */
