@@ -1,30 +1,20 @@
+// src/main/java/com/example/recruitmenttrainingsystem/service/CandidateService.java
 package com.example.recruitmenttrainingsystem.service;
-import com.example.recruitmenttrainingsystem.dto.CreateCandidateDto;
-import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
-import com.example.recruitmenttrainingsystem.repository.RecruitmentPlanRepository;
+
+import com.example.recruitmenttrainingsystem.dto.AddCandidateResultDto;
 import com.example.recruitmenttrainingsystem.dto.CandidateListDto;
-import com.example.recruitmenttrainingsystem.entity.Candidate;
-import com.example.recruitmenttrainingsystem.entity.CandidateResult;
-import com.example.recruitmenttrainingsystem.entity.CandidateReview;
-import com.example.recruitmenttrainingsystem.repository.CandidateRepository;
-import com.example.recruitmenttrainingsystem.repository.CandidateReviewRepository;
+import com.example.recruitmenttrainingsystem.dto.CreateCandidateDto;
+import com.example.recruitmenttrainingsystem.entity.*;
+import com.example.recruitmenttrainingsystem.exception.CustomException;
+import com.example.recruitmenttrainingsystem.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
-import com.example.recruitmenttrainingsystem.dto.AddCandidateResultDto;
-import com.example.recruitmenttrainingsystem.dto.CreateCandidateDto;
-import com.example.recruitmenttrainingsystem.entity.User;
-import com.example.recruitmenttrainingsystem.exception.CustomException;
-import com.example.recruitmenttrainingsystem.repository.CandidateResultRepository;
-import com.example.recruitmenttrainingsystem.repository.RecruitmentPlanRepository;
-import com.example.recruitmenttrainingsystem.repository.UserRepository;
-import org.springframework.transaction.annotation.Transactional;
-import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
-import com.example.recruitmenttrainingsystem.entity.HrRequest;
-import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
 public class CandidateService {
@@ -34,9 +24,11 @@ public class CandidateService {
     private final RecruitmentPlanRepository recruitmentPlanRepository;
     private final CandidateResultRepository candidateResultRepository;
     private final UserRepository userRepository;
-    // GET candidates (all hoặc theo planId)
+
+    // ... (Hàm getCandidates, getReviewsByCandidate, createCandidate giữ nguyên) ...
     @Transactional(readOnly = true)
     public List<CandidateListDto> getCandidates(Long planId) {
+        // ... (code cũ)
         List<Candidate> candidates =
                 (planId != null)
                         ? candidateRepository.findByRecruitmentPlan_RecruitmentPlanId(planId)
@@ -47,27 +39,22 @@ public class CandidateService {
                 .toList();
     }
 
-    // GET review theo ứng viên
     @Transactional(readOnly = true)
     public List<CandidateReview> getReviewsByCandidate(Long candidateId) {
+        // ... (code cũ)
         if (candidateId == null) return Collections.emptyList();
         return candidateReviewRepository.findByCandidate_CandidateId(candidateId);
     }
-    // ham them ung vien
+
     @Transactional
     public CandidateListDto createCandidate(CreateCandidateDto dto) {
-        // 1. Tìm Kế hoạch tuyển dụng
+        // ... (code cũ)
         RecruitmentPlan plan = recruitmentPlanRepository.findById(dto.getPlanId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy kế hoạch tuyển dụng ID: " + dto.getPlanId()));
-
-        // 2. Kiểm tra email trùng trong plan
         boolean exists = candidateRepository.existsByEmailAndRecruitmentPlan_RecruitmentPlanId(dto.getEmail(), dto.getPlanId());
         if (exists) {
-            // Có thể dùng CustomException nếu bạn đã định nghĩa
             throw new RuntimeException("Email ứng viên đã tồn tại trong kế hoạch này.");
         }
-
-        // 3. Tạo Entity
         Candidate candidate = new Candidate();
         candidate.setFullName(dto.getFullName());
         candidate.setEmail(dto.getEmail());
@@ -75,106 +62,149 @@ public class CandidateService {
         candidate.setCvLink(dto.getCvLink());
         candidate.setInterviewDate(dto.getInterviewDate());
         candidate.setRecruitmentPlan(plan);
-        // 'reviews' và 'results' sẽ là list rỗng (theo @Builder.Default trong Entity)
-
-        // 4. Lưu vào DB
         Candidate savedCandidate = candidateRepository.save(candidate);
-
-        // 5. Map sang DTO để trả về cho FE (giống hàm GET)
+        // Map sang DTO (đã bao gồm cvLink và interviewDate)
         return toListDto(savedCandidate);
     }
-    // cap nhat
-    @Transactional
-    public CandidateListDto addCandidateResult(Long candidateId, AddCandidateResultDto dto, String reviewerEmail) {
 
-        // 1. Tìm ứng viên (SỬA: Dùng hàm query mới để lấy EAGER)
+
+    // ✅ ================== THAY THẾ HÀM CŨ ==================
+    /**
+     * Tạo MỚI hoặc CẬP NHẬT kết quả phỏng vấn và review cho ứng viên
+     */
+    @Transactional
+    public CandidateListDto saveCandidateResult(Long candidateId, AddCandidateResultDto dto, String reviewerEmail) {
+
+        // 1. Tìm ứng viên (Dùng hàm fetch EAGER)
         Candidate candidate = candidateRepository.findByIdWithPlanAndRequestDetails(candidateId)
-                .orElseThrow(() -> new CustomException("Không tìm thấy ứng viên với ID: " + candidateId));
+                .orElseThrow(() -> new CustomException("Không tìm thấy ứng viên: " + candidateId));
 
         // 2. Tìm người chấm điểm
         User reviewer = userRepository.findByEmail(reviewerEmail)
-                .orElseThrow(() -> new CustomException("Không tìm thấy người dùng (reviewer) với email: " + reviewerEmail));
+                .orElseThrow(() -> new CustomException("Không tìm thấy user: " + reviewerEmail));
 
-        // ✅ 3. LOGIC MỚI: Kiểm tra giới hạn "PASS"
-        if (dto.getFinalResult().equalsIgnoreCase("PASS")) {
-            RecruitmentPlan plan = candidate.getRecruitmentPlan();
-            HrRequest request = plan.getRequest();
+        // 3. Tìm Result & Review cũ (nếu có)
+        // Chúng ta giả định 1 ứng viên chỉ có 1 kết quả/review cuối cùng
+        CandidateResult result = candidateResultRepository.findFirstByCandidate_CandidateIdOrderByResultIdDesc(candidateId)
+                .orElse(new CandidateResult()); // Tạo mới nếu không có
 
-            // Tính tổng giới hạn "Đầu vào" (soLuong * 2)
-            int totalLimit = request.getQuantityCandidates().stream()
-                    .mapToInt(qc -> qc.getSoLuong() * 2)
-                    .sum();
+        CandidateReview review = candidateReviewRepository.findFirstByCandidate_CandidateIdOrderByReviewIdDesc(candidateId)
+                .orElse(new CandidateReview()); // Tạo mới nếu không có
 
-            // Đếm số lượng đã PASS hiện tại
-            long currentPassCount = candidateResultRepository
-                    .countByCandidate_RecruitmentPlan_RecruitmentPlanIdAndFinalResultIgnoreCase(
-                            plan.getRecruitmentPlanId(),
-                            "PASS"
-                    );
+        // Lấy trạng thái PASS cũ (để check quota)
+        boolean wasAlreadyPass = result.getFinalResult() != null && result.getFinalResult().equalsIgnoreCase("PASS");
+        boolean isFirstTime = result.getResultId() == null; // Đây có phải lần chấm đầu tiên không
 
-            // So sánh
-            if (currentPassCount >= totalLimit) {
-                throw new CustomException(
-                        "Kế hoạch này đã đạt đủ số lượng 'PASS' (" + currentPassCount + "/" + totalLimit + "). " +
-                                "Không thể chấm 'PASS' cho ứng viên này."
-                );
+        // 4. Logic "Read-only" (Yêu cầu 3 & 4)
+        if (!isFirstTime) {
+            String oldStatus = review.getCandidateStatus();
+            if (oldStatus.equals("Đã nhận việc") || oldStatus.equals("Không nhận việc")) {
+                // Nếu trạng thái mới KHÁC trạng thái cũ -> Báo lỗi
+                if (!dto.getCandidateStatus().equals(oldStatus)) {
+                    throw new CustomException("Không thể cập nhật. Ứng viên đã " + oldStatus + ".");
+                }
+
+                // Nếu trạng thái giống, chỉ cho phép cập nhật Note/Lưu ý
+                review.setNote(dto.getNote());
+                candidateReviewRepository.save(review);
+
+                // Bỏ qua cập nhật Result (vì form FE sẽ bị disable)
+                return toListDto(candidate); // Trả về trạng thái cũ
             }
         }
-        // ✅ KẾT THÚC LOGIC MỚI
 
-        // 4. Tạo và lưu CandidateReview (Trạng Thái)
-        CandidateReview review = new CandidateReview();
+        // 5. Logic Quota (Yêu cầu 1)
+        if (dto.getFinalResult().equalsIgnoreCase("PASS")) {
+            // Nếu ứng viên này CHƯA PASS và user muốn chấm PASS
+            if (!wasAlreadyPass) {
+                RecruitmentPlan plan = candidate.getRecruitmentPlan();
+                HrRequest request = plan.getRequest();
+
+                // Tính tổng giới hạn "Đầu vào" (soLuong * 2)
+                int totalLimit = request.getQuantityCandidates().stream()
+                        .mapToInt(qc -> qc.getSoLuong() * 2)
+                        .sum();
+
+                // Đếm số ứng viên (DISTINCT) đã PASS
+                long currentPassCount = candidateResultRepository
+                        .countDistinctPassCandidates(plan.getRecruitmentPlanId());
+
+                if (currentPassCount >= totalLimit) {
+                    throw new CustomException("Kế hoạch này đã đạt đủ số lượng 'PASS' (" + currentPassCount + "/" + totalLimit + "). " +
+                            "Không thể chấm 'PASS' cho ứng viên này.");
+                }
+            }
+            // Nếu wasAlreadyPass=true, nghĩa là chỉ update, không cần check quota
+        }
+
+        // 6. Lưu Review (Trạng Thái)
         review.setCandidate(candidate);
         review.setUser(reviewer);
         review.setCandidateStatus(dto.getCandidateStatus());
         review.setNote(dto.getNote());
-
         CandidateReview savedReview = candidateReviewRepository.save(review);
 
-        // 5. Tạo và lưu CandidateResult (Kết quả phỏng vấn)
-        CandidateResult result = new CandidateResult();
+        // 7. Lưu Result (Kết quả)
         result.setCandidate(candidate);
-        result.setReview(savedReview);
+        result.setReview(savedReview); // Luôn trỏ đến review mới nhất
         result.setAttendedInterview(dto.getAttendedInterview());
         result.setTestScore(dto.getTestScore());
         result.setInterviewScore(dto.getInterviewScore());
         result.setComment(dto.getComment());
         result.setFinalResult(dto.getFinalResult());
+        CandidateResult savedResult = candidateResultRepository.save(result);
 
-        candidateResultRepository.save(result);
-
-        // 6. Cập nhật object 'candidate' (để toListDto dùng)
+        // 8. Cập nhật list (để toListDto chạy đúng)
+        // Xóa cái cũ (nếu có) và thêm cái mới
+        candidate.getReviews().remove(review);
+        candidate.getResults().remove(result);
         candidate.getReviews().add(savedReview);
-        candidate.getResults().add(result);
+        candidate.getResults().add(savedResult);
 
-        // 7. Trả về DTO đã cập nhật
         return toListDto(candidate);
     }
+    // ======================================================
 
+    // ... (Hàm toListDto giữ nguyên) ...
     private CandidateListDto toListDto(Candidate c) {
 
-        // status lấy từ CandidateResult cuối cùng
+        // Đặt giá trị mặc định
         String status = "Chưa có kết quả";
         BigDecimal testScore = null;
         BigDecimal interviewScore = null;
 
+        // ✅ THÊM BIẾN MẶC ĐỊNH
+        String attendedInterview = null;
+        String finalResult = null;
+        String comment = null;
+        String note = null;
+
+        // Lấy review mới nhất (nếu có)
+        if (c.getReviews() != null && !c.getReviews().isEmpty()) {
+            CandidateReview latestReview = c.getReviews().get(c.getReviews().size() - 1);
+            status = latestReview.getCandidateStatus();
+            note = latestReview.getNote(); // ✅ LẤY NOTE
+        }
+
+        // Lấy kết quả mới nhất (nếu có)
         if (c.getResults() != null && !c.getResults().isEmpty()) {
-            // Sắp xếp để lấy mới nhất (hoặc dùng query)
-            // Giả sử list đã được sắp xếp hoặc ta lấy cái cuối cùng
             CandidateResult latest = c.getResults().get(c.getResults().size() - 1);
-
-            // map BE → FE status
-            if (latest.getFinalResult() != null) {
-                String r = latest.getFinalResult().toUpperCase();
-
-                // Cập nhật logic status
-                if (r.equals("PASS")) status = "Đã có kết quả";
-                else if (r.equals("FAIL")) status = "Không nhận việc";
-                else status = latest.getFinalResult(); // Giữ nguyên nếu là status khác
-            }
 
             testScore = latest.getTestScore();
             interviewScore = latest.getInterviewScore();
+
+            // ✅ LẤY DỮ LIỆU CÒN THIẾU
+            attendedInterview = latest.getAttendedInterview();
+            finalResult = latest.getFinalResult();
+            comment = latest.getComment();
+
+            // Fallback (Nếu có Result nhưng chưa có Review)
+            if (status.equals("Chưa có kết quả") && finalResult != null) {
+                String r = finalResult.toUpperCase();
+                if (r.equals("PASS")) status = "Đã có kết quả";
+                else if (r.equals("FAIL")) status = "Không nhận việc";
+                else status = finalResult;
+            }
         }
 
         return CandidateListDto.builder()
@@ -187,6 +217,10 @@ public class CandidateService {
                 .testScore(testScore)
                 .interviewScore(interviewScore)
                 .status(status)
+                .attendedInterview(attendedInterview) // ✅ THÊM VÀO BUILDER
+                .finalResult(finalResult)           // ✅ THÊM VÀO BUILDER
+                .comment(comment)                   // ✅ THÊM VÀO BUILDER
+                .note(note)                         // ✅ THÊM VÀO BUILDER
                 .recruitmentPlanId(
                         c.getRecruitmentPlan() != null ?
                                 c.getRecruitmentPlan().getRecruitmentPlanId() : null

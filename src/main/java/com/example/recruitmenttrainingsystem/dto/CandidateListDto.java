@@ -23,7 +23,10 @@ public class CandidateListDto {
 
     // Trạng thái hiển thị trên cột "Trạng Thái"
     private String status;
-
+    private String attendedInterview; // (Từ Result)
+    private String finalResult;       // (Từ Result)
+    private String comment;           // (Từ Result)
+    private String note;
     // Tên kế hoạch tuyển dụng
     private Long recruitmentPlanId;
     private String recruitmentPlanName;

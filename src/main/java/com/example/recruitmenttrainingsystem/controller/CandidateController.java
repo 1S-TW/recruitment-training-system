@@ -42,14 +42,13 @@ public class CandidateController {
         CandidateListDto newCandidate = candidateService.createCandidate(dto);
         return ResponseEntity.ok(newCandidate);
     }
-    @PostMapping("/{id}/add-result")
-    public ResponseEntity<CandidateListDto> addResult(
-            @PathVariable("id") Long candidateId,
-            @Valid @RequestBody AddCandidateResultDto dto,
-            Authentication auth // Lấy thông tin người đang chấm điểm
+    @PutMapping("/{id}/save-result")
+    public ResponseEntity<CandidateListDto> saveResult( // 👈 Sửa tên hàm
+                                                        @PathVariable("id") Long candidateId,
+                                                        @Valid @RequestBody AddCandidateResultDto dto,
+                                                        Authentication auth
     ) {
-        // auth.getName() chính là email của user (reviewer)
-        CandidateListDto updatedCandidate = candidateService.addCandidateResult(
+        CandidateListDto updatedCandidate = candidateService.saveCandidateResult(
                 candidateId,
                 dto,
                 auth.getName()
