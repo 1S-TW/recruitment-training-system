@@ -1,59 +1,59 @@
-// package com.example.recruitmenttrainingsystem.service;
+// src/main/java/com/example/recruitmenttrainingsystem/service/TrainingService.java
+package com.example.recruitmenttrainingsystem.service;
 
-// import com.example.recruitmenttrainingsystem.dto.TrainingDto;
-// import com.example.recruitmenttrainingsystem.entity.Candidate;
-// import com.example.recruitmenttrainingsystem.repository.CandidateRepository;
+import com.example.recruitmenttrainingsystem.dto.TrainingDto;
+import com.example.recruitmenttrainingsystem.entity.Candidate;
+import com.example.recruitmenttrainingsystem.entity.Intern;
+import com.example.recruitmenttrainingsystem.repository.InternRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
-// import lombok.RequiredArgsConstructor;
-// import org.springframework.stereotype.Service;
-// import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 
-// import java.util.List;
-// import java.util.stream.Collectors;
+@Service
+@RequiredArgsConstructor
+public class TrainingService {
 
-// @Service
-// @RequiredArgsConstructor
-// public class TrainingService {
+    private final InternRepository internRepository;
 
-//     private final CandidateRepository candidateRepository;
+    /**
+     * Lấy danh sách THỰC TẬP SINH từ bảng intern.
+     * FE sẽ lọc Đang thực tập / Đã kết thúc...
+     */
+    public List<TrainingDto> getTrainings() {
 
-//     /**
-//      * Lấy danh sách đào tạo:
-//      * finalResult = PASS
-//      * status = Đã nhận việc
-//      */
-//     @Transactional(readOnly = true)
-//     public List<TrainingDto> getTrainingList() {
-//         List<Candidate> candidates =
-//                 candidateRepository.findByFinalResultIgnoreCaseAndStatusIgnoreCase(
-//                         "PASS",
-//                         "Đã nhận việc"
-//                 );
+        List<Intern> interns = internRepository.findAll();
 
-//         return candidates.stream()
-//                 .map(this::mapCandidateToTraining)
-//                 .collect(Collectors.toList());
-//     }
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
 
-//     /** Mapping từ Candidate → TrainingDto */
-//     private TrainingDto mapCandidateToTraining(Candidate c) {
+        return interns.stream()
+                .map(intern -> {
+                    Candidate c = intern.getCandidate();
+                    LocalDate startDate = intern.getStartDate();
 
-//         String NA = "NA";
+                    Long trainingDays = null;
+                    if (startDate != null) {
+                        trainingDays = ChronoUnit.DAYS.between(startDate, today);
+                    }
 
-//         return TrainingDto.builder()
-//                 .trainingId(c.getCandidateId())
-//                 .traineeName(c.getFullName())
-
-//                 .startDate(null)
-//                 .trainingDays(null)
-
-//                 .subject1Score(NA)
-//                 .subject2Score(NA)
-//                 .subject3Score(NA)
-//                 .finalScore(NA)
-//                 .teamEvaluation(NA)
-
-//                 .internStatus("Đang thực tập")
-//                 .build();
-//     }
-// }
+                    return TrainingDto.builder()
+                            .internId(intern.getInternId())
+                            .candidateId(c != null ? c.getCandidateId() : null)
+                            .fullName(c != null ? c.getFullName() : null)
+                            .startDate(startDate)
+                            .trainingDays(trainingDays)
+                            .subject1(null)
+                            .subject2(null)
+                            .subject3(null)
+                            .summaryResult(null)
+                            .teamReview(null)
+                            .internStatus(intern.getInternStatus())
+                            .build();
+                })
+                .toList();
+    }
+}
+    

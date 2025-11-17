@@ -1,10 +1,7 @@
+// src/main/java/com/example/recruitmenttrainingsystem/dto/TrainingDto.java
 package com.example.recruitmenttrainingsystem.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import lombok.*;
 import java.time.LocalDate;
 
 @Data
@@ -13,19 +10,19 @@ import java.time.LocalDate;
 @Builder
 public class TrainingDto {
 
-    private Long trainingId;        // map từ candidateId
-    private String traineeName;     // tên ứng viên
+    private Long internId;       // ID bản ghi intern
+    private Long candidateId;    // ID ứng viên gốc
+    private String fullName;
 
-    private LocalDate startDate;    // ngày bắt đầu thực tập (nếu sau này có)
-    private Integer trainingDays;   // số ngày TT (nếu có)
+    private LocalDate startDate; // ngày bắt đầu thực tập
+    private Long trainingDays;   // số ngày thực tập (tính từ startDate -> hôm nay)
 
-    private Integer subject1Score;  // Môn học 1 (tạm để trống / map sau)
-    private Integer subject2Score;  // Môn học 2
-    private Integer subject3Score;  // Môn học 3
+    private String subject1;
+    private String subject2;
+    private String subject3;
+    private String summaryResult;
+    private String teamReview;
 
-    private Integer finalScore;     // Tổng kết (VD: testScore hoặc điểm tổng)
-    private String teamEvaluation;  // Đánh giá trên team
-
-    // dùng cho filter "Trạng thái thực tập..."
-    private String internStatus;    // ví dụ: "Đang thực tập", "Đã kết thúc"...
+    // trạng thái thực tập: "Đang thực tập", "Đã kết thúc", ...
+    private String internStatus;
 }
