@@ -10,12 +10,11 @@ import java.time.LocalDate;
 @Builder
 public class TrainingDto {
 
-    private Long internId;       // ID bản ghi intern
-    private Long candidateId;    // ID ứng viên gốc
+    private Long internId;
+    private Long candidateId;
     private String fullName;
-
-    private LocalDate startDate; // ngày bắt đầu thực tập
-    private Long trainingDays;   // số ngày thực tập (tính từ startDate -> hôm nay)
+    private LocalDate startDate;   // ngày bắt đầu TT
+    private Long trainingDays;     // số ngày TT
 
     private String subject1;
     private String subject2;
@@ -23,6 +22,6 @@ public class TrainingDto {
     private String summaryResult;
     private String teamReview;
 
-    // trạng thái thực tập: "Đang thực tập", "Đã kết thúc", ...
-    private String internStatus;
+    // 👉 FE đang đọc t.internStatus, nên field này bắt buộc phải đúng tên
+    private String internStatus;   // "Đang thực tập", "Đã kết thúc", ...
 }

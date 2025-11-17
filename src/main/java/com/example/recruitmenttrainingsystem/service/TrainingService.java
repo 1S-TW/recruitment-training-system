@@ -19,12 +19,9 @@ public class TrainingService {
 
     private final InternRepository internRepository;
 
-    /**
-     * Lấy danh sách THỰC TẬP SINH từ bảng intern.
-     * FE sẽ lọc Đang thực tập / Đã kết thúc...
-     */
     public List<TrainingDto> getTrainings() {
 
+        // lấy tất cả thực tập sinh – FE sẽ lọc “Đang thực tập”
         List<Intern> interns = internRepository.findAll();
 
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -50,10 +47,9 @@ public class TrainingService {
                             .subject3(null)
                             .summaryResult(null)
                             .teamReview(null)
-                            .internStatus(intern.getInternStatus())
+                            .internStatus(intern.getInternStatus())  // 👉 quan trọng
                             .build();
                 })
                 .toList();
     }
 }
-    

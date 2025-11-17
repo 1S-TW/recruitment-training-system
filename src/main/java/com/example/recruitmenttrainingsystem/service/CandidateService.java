@@ -27,9 +27,9 @@ public class CandidateService {
     private final RecruitmentPlanRepository recruitmentPlanRepository;
     private final CandidateResultRepository candidateResultRepository;
     private final UserRepository userRepository;
+    private final InternRepository internRepository;  // dùng để tạo TTS
 
-    // dùng để tạo Intern
-    private final InternRepository internRepository;
+    // ===================== LIST / CREATE =====================
 
     @Transactional(readOnly = true)
     public List<CandidateListDto> getCandidates(Long planId) {
@@ -75,16 +75,17 @@ public class CandidateService {
     }
 
     // ================== LƯU KẾT QUẢ + TRẠNG THÁI ==================
+
     @Transactional
     public CandidateListDto saveCandidateResult(Long candidateId,
                                                 AddCandidateResultDto dto,
                                                 String reviewerEmail) {
 
-        // 1. Tìm ứng viên
+        // 1. Lấy ứng viên
         Candidate candidate = candidateRepository.findByIdWithPlanAndRequestDetails(candidateId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy ứng viên: " + candidateId));
 
-        // 2. Tìm người chấm
+        // 2. Lấy người chấm
         User reviewer = userRepository.findByEmail(reviewerEmail)
                 .orElseThrow(() -> new CustomException("Không tìm thấy user: " + reviewerEmail));
 
@@ -101,13 +102,13 @@ public class CandidateService {
                 && result.getFinalResult().equalsIgnoreCase("PASS");
         boolean isFirstTimeResult = (result.getResultId() == null);
 
-        String previousStatus = review.getCandidateStatus(); // có thể null
+        // trạng thái cũ
+        String previousStatus = review.getCandidateStatus();   // có thể null
 
-        // 4. Nếu đã Đã nhận việc / Không nhận việc -> chỉ cho sửa Note
+        // 4. Nếu đã ở “Đã nhận việc” hoặc “Không nhận việc” → chỉ cho sửa Note
         if (!isFirstTimeResult && previousStatus != null) {
             if (previousStatus.equals("Đã nhận việc") || previousStatus.equals("Không nhận việc")) {
 
-                // không cho đổi sang trạng thái khác
                 if (!dto.getCandidateStatus().equals(previousStatus)) {
                     throw new CustomException("Không thể cập nhật. Ứng viên đã " + previousStatus + ".");
                 }
@@ -138,7 +139,7 @@ public class CandidateService {
             }
         }
 
-        // 6. Lưu Review ( trạng thái )
+        // 6. Lưu REVIEW (trạng thái)
         review.setCandidate(candidate);
         review.setUser(reviewer);
         review.setCandidateStatus(dto.getCandidateStatus());
@@ -146,7 +147,7 @@ public class CandidateService {
         review.setReviewDate(LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")));
         CandidateReview savedReview = candidateReviewRepository.save(review);
 
-        // 7. Lưu Result
+        // 7. Lưu RESULT
         result.setCandidate(candidate);
         result.setReview(savedReview);
         result.setAttendedInterview(dto.getAttendedInterview());
@@ -156,13 +157,13 @@ public class CandidateService {
         result.setFinalResult(dto.getFinalResult());
         CandidateResult savedResult = candidateResultRepository.save(result);
 
-        // đồng bộ list trong entity
+        // đồng bộ list
         candidate.getReviews().remove(review);
         candidate.getResults().remove(result);
         candidate.getReviews().add(savedReview);
         candidate.getResults().add(savedResult);
 
-        // 8. Tạo THỰC TẬP SINH khi "Đã nhận việc" + PASS
+        // 8. TẠO THỰC TẬP SINH nếu lần đầu chuyển sang “Đã nhận việc” / “Đã xác nhận”
         String statusNow = dto.getCandidateStatus() == null
                 ? ""
                 : dto.getCandidateStatus().trim().toLowerCase(Locale.ROOT);
@@ -170,18 +171,21 @@ public class CandidateService {
                 ? ""
                 : previousStatus.trim().toLowerCase(Locale.ROOT);
 
-        boolean isAcceptedNow = statusNow.contains("nhận việc");   // ví dụ: "Đã nhận việc"
-        boolean wasAcceptedBefore = statusOld.contains("nhận việc");
+        // chấp nhận cả text “đã nhận việc” lẫn “đã xác nhận”
+        boolean isAcceptedNow =
+                statusNow.contains("nhận việc") || statusNow.contains("xác nhận");
+        boolean wasAcceptedBefore =
+                statusOld.contains("nhận việc") || statusOld.contains("xác nhận");
 
         if (isAcceptedNow && !wasAcceptedBefore) {
 
-            // bắt buộc phải PASS
-            if (!"PASS".equalsIgnoreCase(dto.getFinalResult())) {
-                throw new CustomException("Ứng viên phải PASS thì mới tạo thực tập sinh.");
-            }
+            // ❌ ĐÃ BỎ check bắt buộc PASS:
+            // if (!"PASS".equalsIgnoreCase(dto.getFinalResult())) { ... }
 
             boolean alreadyIntern = internRepository.existsByCandidate_CandidateId(candidateId);
             if (!alreadyIntern) {
+                System.out.println(">>> TẠO INTERN cho candidateId = " + candidateId);
+
                 Intern intern = Intern.builder()
                         .candidate(candidate)
                         .recruitmentPlan(candidate.getRecruitmentPlan())
@@ -198,7 +202,8 @@ public class CandidateService {
         return toListDto(candidate);
     }
 
-    // ================== MAP RA DTO CHO MÀN ỨNG VIÊN ==================
+    // ================== MAP DTO dùng cho màn Ứng viên ==================
+
     private CandidateListDto toListDto(Candidate c) {
 
         String status = "Chưa có kết quả";
