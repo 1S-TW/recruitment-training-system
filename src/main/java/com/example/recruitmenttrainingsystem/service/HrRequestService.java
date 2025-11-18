@@ -146,9 +146,11 @@ public class HrRequestService {
             throw new RuntimeException("Yêu cầu đã bị từ chối, không thể phê duyệt / khởi tạo kế hoạch");
         }
 
-        // chuyển sang PENDING khi phê duyệt (như bạn muốn trước đó)
-        req.setStatus("PENDING");
+        // ❌ KHÔNG ĐỔI SANG PENDING NỮA
+        // Giữ nguyên status hiện tại (thường là NEW - "Đã gửi")
+        // req.setStatus("PENDING");
 
+        // chỉ cập nhật ghi chú nếu có
         if (note != null && !note.isBlank()) {
             req.setNote(note.trim());
         }
@@ -156,6 +158,7 @@ public class HrRequestService {
         HrRequest saved = hrRequestRepository.save(req);
         return toResponseWithTechs(saved);
     }
+
 
     @Transactional
     public HrRequestResponse rejectRequest(Long id, String reason) {
@@ -167,17 +170,38 @@ public class HrRequestService {
             throw new RuntimeException("Yêu cầu đã được xử lý, không thể từ chối.");
         }
 
-        // FE đã chặn rỗng, ở BE cứ fallback cho chắc
-        String finalReason = (reason == null || reason.isBlank())
+        // Lý do (fallback nếu FE gửi rỗng)
+        String rawReason = (reason == null || reason.isBlank())
                 ? "Không ghi rõ lý do."
                 : reason.trim();
 
-        req.setStatus("CANCELED");
-        req.setRejectReason(finalReason);
-        HrRequest saved = hrRequestRepository.save(req);
+        // Lấy thông tin user hiện tại từ SecurityContext
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(email).orElse(null);
 
+        // ✅ Chỉ dùng fullName, nếu không có thì dùng email
+        String displayName;
+        if (currentUser != null
+                && currentUser.getFullName() != null
+                && !currentUser.getFullName().isBlank()) {
+            displayName = currentUser.getFullName();
+        } else {
+            displayName = email;
+        }
+
+        // Format rejectReason: để FE parse và hiển thị
+        String formatted =
+                "Người từ chối nhu cầu: " + displayName + ". Lý do: " + rawReason;
+
+        req.setStatus("CANCELED");
+        req.setRejectReason(formatted);
+        // nếu sau này bạn thêm field rejectedBy trong HrRequest:
+        // req.setRejectedBy(currentUser);
+
+        HrRequest saved = hrRequestRepository.save(req);
         return toResponseWithTechs(saved);
     }
+
 
     // ================== OTHERS ==================
 
@@ -217,7 +241,7 @@ public class HrRequestService {
         return dto;
     }
 
-    // trong HrRequestService.java, cuối file
+    // Map entity -> DTO (HrRequestResponse)
     private HrRequestResponse toResponseWithTechs(HrRequest hr) {
         List<TechQuantityDto> techs = quantityCandidateRepository
                 .findByHrRequest_RequestId(hr.getRequestId())
@@ -234,9 +258,7 @@ public class HrRequestService {
                 hr.getNote(),   // ghi chú chung
                 hr.getCreatedBy() != null ? hr.getCreatedBy().getFullName() : null,
                 techs,
-                hr.getRejectReason() // ✅ TRUYỀN LÝ DO TỪ CHỐI RA DTO
+                hr.getRejectReason() // ✅ truyền lý do từ chối (đã format) ra DTO
         );
     }
-
 }
-
