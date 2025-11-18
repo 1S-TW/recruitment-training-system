@@ -56,10 +56,20 @@ public class RecruitmentPlanService {
             plan.setCreatedAt(LocalDateTime.now());
         }
 
-        return recruitmentPlanRepository.save(plan);
+        // Lưu kế hoạch trước
+        RecruitmentPlan saved = recruitmentPlanRepository.save(plan);
+
+        // ✅ Chỉ khi đã tạo xong kế hoạch thì mới cập nhật trạng thái nhu cầu
+        // từ ĐÃ GỬI (NEW) sang ĐANG TIẾN HÀNH (IN_PROGRESS)
+        if (!"IN_PROGRESS".equalsIgnoreCase(req.getStatus())) {
+            req.setStatus("IN_PROGRESS");   // ĐANG TIẾN HÀNH (IN_PROGRESS)
+            hrRequestRepository.save(req);
+        }
+
+        return saved;
     }
 
-    // ✅ PHÊ DUYỆT: NEW -> CONFIRMED
+    // ✅ PHÊ DUYỆT: ĐÃ GỬI (NEW) -> CONFIRMED
     @Transactional
     public RecruitmentPlanResponse confirmPlan(Long id) {
         RecruitmentPlan plan = recruitmentPlanRepository.findById(id)
@@ -74,7 +84,7 @@ public class RecruitmentPlanService {
         return toResponse(plan);
     }
 
-    // ✅ TỪ CHỐI: NEW -> REJECTED + note
+    // ✅ TỪ CHỐI: ĐÃ GỬI (NEW) -> REJECTED + note
     @Transactional
     public RecruitmentPlanResponse rejectPlan(Long id, String reason) {
         RecruitmentPlan plan = recruitmentPlanRepository.findById(id)
@@ -83,7 +93,7 @@ public class RecruitmentPlanService {
 
         if (!"NEW".equalsIgnoreCase(plan.getStatus())) {
             throw new IllegalStateException(
-                    "Chỉ được từ chối kế hoạch ở trạng thái 'NEW'. Trạng thái hiện tại: " + plan.getStatus()
+                    "Chỉ được từ chối kế hoạch ở trạng thái 'ĐÃ GỬI (NEW)'. Trạng thái hiện tại: " + plan.getStatus()
             );
         }
 
@@ -126,7 +136,7 @@ public class RecruitmentPlanService {
         return new RecruitmentPlanResponse(
                 plan.getRecruitmentPlanId(),
                 plan.getPlanName(),
-                plan.getStatus(),
+                plan.getStatus(), // FE map: NEW -> ĐÃ GỬI, CONFIRMED -> Đã xác nhận,...
                 plan.getRecruitmentDeadline(),
                 plan.getDeliveryDeadline(),
                 plan.getCreatedAt(),
