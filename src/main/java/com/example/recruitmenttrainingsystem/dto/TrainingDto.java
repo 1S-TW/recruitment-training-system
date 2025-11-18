@@ -19,6 +19,11 @@ public class TrainingDto {
     private String subject1;
     private String subject2;
     private String subject3;
+    // ✅ thêm 3 môn học mới
+    private String subject4;
+    private String subject5;
+    private String subject6;
+
     private String summaryResult;
     private String teamReview;
 

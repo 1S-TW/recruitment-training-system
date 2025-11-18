@@ -8,9 +8,9 @@ import com.example.recruitmenttrainingsystem.repository.InternRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -21,9 +21,7 @@ public class TrainingService {
 
     public List<TrainingDto> getTrainings() {
 
-        // lấy tất cả thực tập sinh – FE sẽ lọc “Đang thực tập”
         List<Intern> interns = internRepository.findAll();
-
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
 
         return interns.stream()
@@ -33,7 +31,7 @@ public class TrainingService {
 
                     Long trainingDays = null;
                     if (startDate != null) {
-                        trainingDays = ChronoUnit.DAYS.between(startDate, today);
+                        trainingDays = calculateWorkingDays(startDate, today); // đã trừ T7, CN
                     }
 
                     return TrainingDto.builder()
@@ -45,11 +43,40 @@ public class TrainingService {
                             .subject1(null)
                             .subject2(null)
                             .subject3(null)
+                            .subject4(null)   // ✅ mới
+                            .subject5(null)   // ✅ mới
+                            .subject6(null)   // ✅ mới
                             .summaryResult(null)
                             .teamReview(null)
-                            .internStatus(intern.getInternStatus())  // 👉 quan trọng
+                            .internStatus(intern.getInternStatus())
                             .build();
                 })
                 .toList();
+    }
+
+    /**
+     * Tính số ngày làm việc (không tính Thứ 7 & Chủ nhật)
+     * startDate: ngày bắt đầu
+     * endDate: ngày kết thúc (ở đây đang là ngày hiện tại), giống logic DAYS.between: [start, end)
+     */
+    private long calculateWorkingDays(LocalDate startDate, LocalDate endDate) {
+        // nếu endDate trước startDate thì coi như 0 ngày
+        if (endDate == null || startDate == null || !endDate.isAfter(startDate)) {
+            return 0L;
+        }
+
+        long workingDays = 0L;
+        LocalDate d = startDate;
+
+        // giống ChronoUnit.DAYS.between(start, end): lặp tới ngày TRƯỚC endDate
+        while (d.isBefore(endDate)) {
+            DayOfWeek dow = d.getDayOfWeek();
+            if (dow != DayOfWeek.SATURDAY && dow != DayOfWeek.SUNDAY) {
+                workingDays++;
+            }
+            d = d.plusDays(1);
+        }
+
+        return workingDays;
     }
 }
