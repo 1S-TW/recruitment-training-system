@@ -105,18 +105,18 @@ public class CandidateService {
         // trạng thái cũ
         String previousStatus = review.getCandidateStatus();   // có thể null
 
-        // 4. Nếu đã ở “Đã nhận việc” hoặc “Không nhận việc” → chỉ cho sửa Note
-        if (!isFirstTimeResult && previousStatus != null) {
-            if (previousStatus.equals("Đã nhận việc") || previousStatus.equals("Không nhận việc")) {
+       // 4
+        if (!isFirstTimeResult && previousStatus != null && previousStatus.equals("Đã nhận việc")) {
 
-                if (!dto.getCandidateStatus().equals(previousStatus)) {
-                    throw new CustomException("Không thể cập nhật. Ứng viên đã " + previousStatus + ".");
-                }
-
-                review.setNote(dto.getNote());
-                candidateReviewRepository.save(review);
-                return toListDto(candidate);
+            // Nếu cố gắng đổi trạng thái khác ngoài "Đã nhận việc" thì lỗi
+            if (!dto.getCandidateStatus().equals(previousStatus)) {
+                throw new CustomException("Không thể cập nhật. Ứng viên đã " + previousStatus + ".");
             }
+
+            // Chỉ cho phép sửa note khi đã là "Đã nhận việc"
+            review.setNote(dto.getNote());
+            candidateReviewRepository.save(review);
+            return toListDto(candidate);
         }
 
         // 5. Giữ nguyên logic quota PASS
@@ -136,6 +136,21 @@ public class CandidateService {
                     throw new CustomException("Kế hoạch này đã đạt đủ số lượng 'PASS' (" +
                             currentPassCount + "/" + totalLimit + "). Không thể chấm 'PASS' cho ứng viên này.");
                 }
+            }
+        }
+// ... (Logic Quota PASS giữ nguyên, kết thúc ở khoảng dòng 134)
+
+        // 5.5. ✅ KIỂM TRA LOGIC VÔ LÝ: FAIL không thể là Đã nhận việc
+        if ("FAIL".equalsIgnoreCase(dto.getFinalResult())) {
+            // Kiểm tra trạng thái mới có phải là "Đã nhận việc" hoặc "Đã xác nhận" (cũng là trạng thái cuối) không
+            String statusNow = (dto.getCandidateStatus() == null)
+                    ? ""
+                    : dto.getCandidateStatus().trim().toLowerCase(Locale.ROOT);
+
+            boolean isAcceptedNow = statusNow.contains("nhận việc") || statusNow.contains("xác nhận");
+
+            if (isAcceptedNow) {
+                throw new CustomException("Lỗi logic: Không thể đặt trạng thái 'Đã nhận việc' nếu kết quả cuối cùng là 'FAIL'.");
             }
         }
 
