@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/service/RecruitmentPlanService.java
 package com.example.recruitmenttrainingsystem.service;
 
 import com.example.recruitmenttrainingsystem.dto.RecruitmentPlanResponse;
@@ -9,7 +10,9 @@ import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
 import com.example.recruitmenttrainingsystem.entity.User;
 import com.example.recruitmenttrainingsystem.repository.HrRequestRepository;
 import com.example.recruitmenttrainingsystem.repository.RecruitmentPlanRepository;
+import com.example.recruitmenttrainingsystem.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,7 @@ public class RecruitmentPlanService {
 
     private final RecruitmentPlanRepository recruitmentPlanRepository;
     private final HrRequestRepository hrRequestRepository;
+    private final UserRepository userRepository;     // NEW
 
     // ================== PUBLIC APIs ==================
 
@@ -59,17 +63,16 @@ public class RecruitmentPlanService {
         // Lưu kế hoạch trước
         RecruitmentPlan saved = recruitmentPlanRepository.save(plan);
 
-        // ✅ Chỉ khi đã tạo xong kế hoạch thì mới cập nhật trạng thái nhu cầu
-        // từ ĐÃ GỬI (NEW) sang ĐANG TIẾN HÀNH (IN_PROGRESS)
+        // ✅ Sau khi tạo kế hoạch: Nhu cầu -> IN_PROGRESS
         if (!"IN_PROGRESS".equalsIgnoreCase(req.getStatus())) {
-            req.setStatus("IN_PROGRESS");   // ĐANG TIẾN HÀNH (IN_PROGRESS)
+            req.setStatus("IN_PROGRESS");
             hrRequestRepository.save(req);
         }
 
         return saved;
     }
 
-    // ✅ PHÊ DUYỆT: ĐÃ GỬI (NEW) -> CONFIRMED
+    // ✅ PHÊ DUYỆT: NEW -> CONFIRMED
     @Transactional
     public RecruitmentPlanResponse confirmPlan(Long id) {
         RecruitmentPlan plan = recruitmentPlanRepository.findById(id)
@@ -84,7 +87,7 @@ public class RecruitmentPlanService {
         return toResponse(plan);
     }
 
-    // ✅ TỪ CHỐI: ĐÃ GỬI (NEW) -> REJECTED + note
+    // ✅ TỪ CHỐI: NEW -> REJECTED + note + update HrRequest
     @Transactional
     public RecruitmentPlanResponse rejectPlan(Long id, String reason) {
         RecruitmentPlan plan = recruitmentPlanRepository.findById(id)
@@ -93,13 +96,41 @@ public class RecruitmentPlanService {
 
         if (!"NEW".equalsIgnoreCase(plan.getStatus())) {
             throw new IllegalStateException(
-                    "Chỉ được từ chối kế hoạch ở trạng thái 'ĐÃ GỬI (NEW)'. Trạng thái hiện tại: " + plan.getStatus()
+                    "Chỉ được từ chối kế hoạch ở trạng thái 'NEW'. Trạng thái hiện tại: " + plan.getStatus()
             );
         }
 
+        // Chuẩn hoá lý do
+        String finalReason = (reason == null || reason.isBlank())
+                ? "Không ghi rõ lý do."
+                : reason.trim();
+
+        // Lấy user đang đăng nhập – người từ chối
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User actor = userRepository.findByEmail(email).orElse(null);
+
+        // --- Cập nhật RecruitmentPlan ---
         plan.setStatus("REJECTED");
-        plan.setNote(reason);
+        plan.setNote(finalReason);
+        if (actor != null) {
+            plan.setRejectedBy(actor);
+        }
         recruitmentPlanRepository.save(plan);
+
+        // --- Đồng bộ lại HrRequest ---
+        HrRequest req = plan.getRequest();
+        if (req != null) {
+            req.setStatus("CANCELED"); // hiển thị "Bị từ chối" ở FE
+
+            String actorName = actor != null
+                    ? actor.getFullName()
+                    : "Không rõ (hệ thống)";
+            String combinedReason =
+                    "Người từ chối kế hoạch: " + actorName + ". Lý do: " + finalReason;
+
+            req.setRejectReason(combinedReason);
+            hrRequestRepository.save(req);
+        }
 
         return toResponse(plan);
     }
@@ -111,7 +142,7 @@ public class RecruitmentPlanService {
 
         // User tạo nhu cầu
         RecruitmentPlanResponse.SimpleUserDto userDto = null;
-        User createdBy = req.getCreatedBy();
+        User createdBy = (req != null) ? req.getCreatedBy() : null;
         if (createdBy != null) {
             userDto = new RecruitmentPlanResponse.SimpleUserDto(
                     createdBy.getFullName(),
@@ -121,27 +152,36 @@ public class RecruitmentPlanService {
 
         // Danh sách công nghệ + số lượng
         List<RecruitmentPlanResponse.SimpleQuantityCandidateDto> qcDtos =
-                req.getQuantityCandidates().stream()
+                (req != null ? req.getQuantityCandidates() : List.<QuantityCandidate>of())
+                        .stream()
                         .map(this::mapQuantityCandidate)
                         .toList();
 
         RecruitmentPlanResponse.SimpleHrRequestDto reqDto =
-                new RecruitmentPlanResponse.SimpleHrRequestDto(
+                (req == null)
+                        ? null
+                        : new RecruitmentPlanResponse.SimpleHrRequestDto(
                         req.getRequestId(),
                         req.getRequestTitle(),
                         userDto,
                         qcDtos
                 );
 
+        String rejectedByName = null;
+        if (plan.getRejectedBy() != null) {
+            rejectedByName = plan.getRejectedBy().getFullName();
+        }
+
         return new RecruitmentPlanResponse(
                 plan.getRecruitmentPlanId(),
                 plan.getPlanName(),
-                plan.getStatus(), // FE map: NEW -> ĐÃ GỬI, CONFIRMED -> Đã xác nhận,...
+                plan.getStatus(),
                 plan.getRecruitmentDeadline(),
                 plan.getDeliveryDeadline(),
                 plan.getCreatedAt(),
                 plan.getNote(),
-                reqDto
+                reqDto,
+                rejectedByName
         );
     }
 
@@ -158,16 +198,10 @@ public class RecruitmentPlanService {
         );
     }
 
-    // ================== HÀM MỚI – DÙNG CHO DROPDOWN ỨNG VIÊN ==================
+    // ================== HÀM MỚI – DROPDOWN ỨNG VIÊN ==================
 
-    /**
-     * Lấy danh sách kế hoạch đã được CONFIRMED để hiển thị ở dropdown
-     * "Kế hoạch tuyển dụng" trong màn Quản lý ứng viên.
-     * (FE sẽ hiển thị label "Đã xác nhận".)
-     */
     @Transactional(readOnly = true)
     public List<PlanOptionDto> getApprovedPlansForDropdown() {
-        // Status trong DB là CONFIRMED
         List<RecruitmentPlan> plans =
                 recruitmentPlanRepository.findByStatusIgnoreCaseOrderByCreatedAtDesc("CONFIRMED");
 
