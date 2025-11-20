@@ -14,9 +14,10 @@ public class HrRequestResponse {
     private LocalDateTime createdAt;
     private String note;
     private String createdByName;
-
-    // MỚI: DANH SÁCH CÔNG NGHỆ
     private List<TechQuantityDto> techQuantities;
+
+    // ✅ lý do từ chối riêng
+    private String rejectReason;
 
     public HrRequestResponse(
             Long requestId,
@@ -26,7 +27,8 @@ public class HrRequestResponse {
             LocalDateTime createdAt,
             String note,
             String createdByName,
-            List<TechQuantityDto> techQuantities
+            List<TechQuantityDto> techQuantities,
+            String rejectReason          // ✅ thêm tham số
     ) {
         this.requestId = requestId;
         this.requestTitle = requestTitle;
@@ -36,6 +38,7 @@ public class HrRequestResponse {
         this.note = note;
         this.createdByName = createdByName;
         this.techQuantities = techQuantities;
+        this.rejectReason = rejectReason;   // ✅ gán
     }
 
     // GETTERS
@@ -47,4 +50,8 @@ public class HrRequestResponse {
     public String getNote() { return note; }
     public String getCreatedByName() { return createdByName; }
     public List<TechQuantityDto> getTechQuantities() { return techQuantities; }
+
+    public String getRejectReason() {   // ✅ thêm getter
+        return rejectReason;
+    }
 }

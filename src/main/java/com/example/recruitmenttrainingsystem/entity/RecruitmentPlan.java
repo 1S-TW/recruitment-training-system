@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/entity/RecruitmentPlan.java
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
@@ -58,10 +59,17 @@ public class RecruitmentPlan {
     // ===== Quan hệ 1–N với Candidate =====
     @OneToMany(
             mappedBy = "recruitmentPlan",
-            cascade = CascadeType.ALL,
+            cascade = CascadeType.ALL,   // ✅ VIẾT HOA
             orphanRemoval = true
     )
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Candidate> candidates = new ArrayList<>();
+
+    // ===== Người từ chối kế hoạch (nếu có) =====
+    @ManyToOne
+    @JoinColumn(name = "rejected_by")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User rejectedBy;
 }
