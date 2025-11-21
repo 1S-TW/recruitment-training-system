@@ -59,7 +59,7 @@ public class HrRequest {
         if (this.createdAt == null) this.createdAt = LocalDateTime.now();
     }
 
-    // GETTER CHO quantityCandidates
+    // GETTER CHO quantityCandidates1
     public List<QuantityCandidate> getQuantityCandidates() {
         return quantityCandidates;
     }
