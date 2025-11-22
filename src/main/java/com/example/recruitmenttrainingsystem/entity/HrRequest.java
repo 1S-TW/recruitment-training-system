@@ -1,16 +1,13 @@
 // src/main/java/com/example/recruitmenttrainingsystem/entity/HrRequest.java
 package com.example.recruitmenttrainingsystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
 
 @Entity
 @Table(name = "hr_request")
@@ -44,9 +41,20 @@ public class HrRequest {
     @Column(name = "reject_reason", length = 500)
     private String rejectReason;
 
+    // ✅ Người tạo nhu cầu
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
+
+    // ✅ Người phê duyệt nhu cầu
+    @ManyToOne
+    @JoinColumn(name = "approved_by")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User approvedBy;
+
+    @Column(name = "approved_at", columnDefinition = "DATETIME(6)")
+    private LocalDateTime approvedAt;
 
     @OneToMany(mappedBy = "hrRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
@@ -56,6 +64,8 @@ public class HrRequest {
 
     @PrePersist
     void setCreatedAt() {
-        if (this.createdAt == null) this.createdAt = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 }

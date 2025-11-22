@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/controller/RecruitmentPlanController.java
 package com.example.recruitmenttrainingsystem.controller;
 
 import com.example.recruitmenttrainingsystem.dto.CreateRecruitmentPlanDto;
@@ -55,9 +56,14 @@ public class RecruitmentPlanController {
     }
 
     // ✅ MỚI: lấy danh sách kế hoạch đã CONFIRMED cho dropdown "Quản lý ứng viên"
-    // FE đang gọi: GET /api/recruitment-plans/approved
     @GetMapping("/approved")
     public ResponseEntity<List<PlanOptionDto>> getApprovedPlans() {
         return ResponseEntity.ok(recruitmentPlanService.getApprovedPlansForDropdown());
+    }
+
+    // ✅ MỚI: lấy kế hoạch theo requestId (dùng cho timeline trong chi tiết nhu cầu)
+    @GetMapping("/by-request/{requestId}")
+    public ResponseEntity<RecruitmentPlanResponse> getByRequest(@PathVariable Long requestId) {
+        return ResponseEntity.ok(recruitmentPlanService.getByRequestId(requestId));
     }
 }

@@ -25,7 +25,7 @@ public class RecruitmentPlanService {
 
     private final RecruitmentPlanRepository recruitmentPlanRepository;
     private final HrRequestRepository hrRequestRepository;
-    private final UserRepository userRepository;     // NEW
+    private final UserRepository userRepository;
 
     // ================== PUBLIC APIs ==================
 
@@ -56,6 +56,13 @@ public class RecruitmentPlanService {
         plan.setDeliveryDeadline(dto.getDeliveryDeadline());
         plan.setNote(dto.getNote());
 
+        // ✅ AI ĐANG ĐĂNG NHẬP LÀ NGƯỜI KHỞI TẠO KẾ HOẠCH
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User actor = userRepository.findByEmail(email).orElse(null);
+        if (actor != null) {
+            plan.setCreatedBy(actor);
+        }
+
         if (plan.getCreatedAt() == null) {
             plan.setCreatedAt(LocalDateTime.now());
         }
@@ -72,16 +79,36 @@ public class RecruitmentPlanService {
         return saved;
     }
 
-    // ✅ PHÊ DUYỆT: NEW -> CONFIRMED
+    // ✅ PHÊ DUYỆT KẾ HOẠCH
+    //    + status kế hoạch: CONFIRMED
+    //    + HrRequest.status chỉ để IN_PROGRESS (không được COMPLETED vì còn 2 bước sau)
     @Transactional
     public RecruitmentPlanResponse confirmPlan(Long id) {
         RecruitmentPlan plan = recruitmentPlanRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Không tìm thấy kế hoạch tuyển dụng ID: " + id));
 
-        if ("NEW".equalsIgnoreCase(plan.getStatus())) {
+        if (!"CONFIRMED".equalsIgnoreCase(plan.getStatus())) {
+
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User actor = userRepository.findByEmail(email).orElse(null);
+
             plan.setStatus("CONFIRMED");
+            if (actor != null) {
+                plan.setConfirmedBy(actor);
+            }
+            if (plan.getConfirmedAt() == null) {
+                plan.setConfirmedAt(LocalDateTime.now());
+            }
+
             recruitmentPlanRepository.save(plan);
+
+            HrRequest req = plan.getRequest();
+            if (req != null && !"CANCELED".equalsIgnoreCase(req.getStatus())) {
+                // Yêu cầu vẫn phải "Đang tiến hành" vì chưa xong các bước quản lý ứng viên + đào tạo
+                req.setStatus("IN_PROGRESS");
+                hrRequestRepository.save(req);
+            }
         }
 
         return toResponse(plan);
@@ -122,7 +149,7 @@ public class RecruitmentPlanService {
         if (req != null) {
             req.setStatus("CANCELED"); // hiển thị "Bị từ chối" ở FE
 
-            String actorName = actor != null
+            String actorName = (actor != null)
                     ? actor.getFullName()
                     : "Không rõ (hệ thống)";
             String combinedReason =
@@ -137,41 +164,52 @@ public class RecruitmentPlanService {
 
     // ================== PRIVATE MAPPER ==================
 
+    // src/main/java/com/example/recruitmenttrainingsystem/service/RecruitmentPlanService.java
+// ... các import + @Service, @RequiredArgsConstructor như bạn đã có
+
+    // ================== PRIVATE MAPPER ==================
+
     private RecruitmentPlanResponse toResponse(RecruitmentPlan plan) {
         HrRequest req = plan.getRequest();
 
-        // User tạo nhu cầu
+        // ===== 1. User tạo nhu cầu =====
         RecruitmentPlanResponse.SimpleUserDto userDto = null;
-        User createdBy = (req != null) ? req.getCreatedBy() : null;
-        if (createdBy != null) {
+        if (req != null && req.getCreatedBy() != null) {
+            User createdBy = req.getCreatedBy();
             userDto = new RecruitmentPlanResponse.SimpleUserDto(
                     createdBy.getFullName(),
                     createdBy.getEmail()
             );
         }
 
-        // Danh sách công nghệ + số lượng
+        // ===== 2. Danh sách công nghệ + số lượng trên nhu cầu =====
         List<RecruitmentPlanResponse.SimpleQuantityCandidateDto> qcDtos =
-                (req != null ? req.getQuantityCandidates() : List.<QuantityCandidate>of())
+                (req != null && req.getQuantityCandidates() != null
+                        ? req.getQuantityCandidates()
+                        : List.<QuantityCandidate>of()
+                )
                         .stream()
                         .map(this::mapQuantityCandidate)
                         .toList();
 
-        RecruitmentPlanResponse.SimpleHrRequestDto reqDto =
-                (req == null)
-                        ? null
-                        : new RecruitmentPlanResponse.SimpleHrRequestDto(
-                        req.getRequestId(),
-                        req.getRequestTitle(),
-                        userDto,
-                        qcDtos
-                );
+        // ===== 3. Đóng gói nhu cầu đơn giản =====
+        RecruitmentPlanResponse.SimpleHrRequestDto reqDto = null;
+        if (req != null) {
+            reqDto = new RecruitmentPlanResponse.SimpleHrRequestDto(
+                    req.getRequestId(),
+                    req.getRequestTitle(),
+                    userDto,
+                    qcDtos
+            );
+        }
 
+        // ===== 4. Người từ chối kế hoạch (nếu có) =====
         String rejectedByName = null;
         if (plan.getRejectedBy() != null) {
             rejectedByName = plan.getRejectedBy().getFullName();
         }
 
+        // ===== 5. Trả DTO =====
         return new RecruitmentPlanResponse(
                 plan.getRecruitmentPlanId(),
                 plan.getPlanName(),
@@ -180,7 +218,7 @@ public class RecruitmentPlanService {
                 plan.getDeliveryDeadline(),
                 plan.getCreatedAt(),
                 plan.getNote(),
-                reqDto,
+                reqDto,          // ✅ luôn set request (có thể null nếu DB thiếu)
                 rejectedByName
         );
     }
@@ -198,6 +236,8 @@ public class RecruitmentPlanService {
         );
     }
 
+    
+
     // ================== HÀM MỚI – DROPDOWN ỨNG VIÊN ==================
 
     @Transactional(readOnly = true)
@@ -208,5 +248,15 @@ public class RecruitmentPlanService {
         return plans.stream()
                 .map(p -> new PlanOptionDto(p.getRecruitmentPlanId(), p.getPlanName()))
                 .toList();
+    }
+
+    // ================== HÀM MỚI – LẤY PLAN THEO REQUEST ==================
+
+    @Transactional(readOnly = true)
+    public RecruitmentPlanResponse getByRequestId(Long requestId) {
+        RecruitmentPlan plan = recruitmentPlanRepository.findByRequest_RequestId(requestId)
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy kế hoạch cho yêu cầu ID: " + requestId));
+        return toResponse(plan);
     }
 }

@@ -22,12 +22,13 @@ public class RecruitmentPlanResponse {
     private LocalDateTime createdAt;
     private String note;
 
+    // ✅ Nhu cầu gốc dùng để tạo kế hoạch
     private SimpleHrRequestDto request;
 
-    // NEW: tên người từ chối kế hoạch (nếu có)
+    // ✅ Tên người từ chối (nếu có)
     private String rejectedByName;
 
-    // ========== NESTED DTOS ==========
+    // ----------------- NESTED DTOS -----------------
 
     @Data
     @NoArgsConstructor
@@ -35,7 +36,7 @@ public class RecruitmentPlanResponse {
     public static class SimpleHrRequestDto {
         private Long requestId;
         private String requestTitle;
-        private SimpleUserDto createdBy;
+        private SimpleUserDto createdBy; // người lập nhu cầu
         private List<SimpleQuantityCandidateDto> quantityCandidates;
     }
 
@@ -44,15 +45,7 @@ public class RecruitmentPlanResponse {
     @AllArgsConstructor
     public static class SimpleUserDto {
         private String fullName;
-        private String username;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class SimpleQuantityCandidateDto {
-        private Integer soLuong;
-        private SimpleTechnologyDto technology;
+        private String email;
     }
 
     @Data
@@ -61,5 +54,13 @@ public class RecruitmentPlanResponse {
     public static class SimpleTechnologyDto {
         private Long id;
         private String name;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SimpleQuantityCandidateDto {
+        private Integer soLuong;
+        private SimpleTechnologyDto technology;
     }
 }
