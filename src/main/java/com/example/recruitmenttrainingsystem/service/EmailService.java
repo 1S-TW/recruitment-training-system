@@ -15,7 +15,7 @@ import org.thymeleaf.context.Context;
 public class EmailService {
 
     private final JavaMailSender mailSender;
-    private final TemplateEngine templateEngine; // Thêm TemplateEngine
+    private final TemplateEngine templateEngine;
 
     // --- SỬA HÀM NÀY ---
     public void sendVerificationEmail(String to, String token, String fullName) {
