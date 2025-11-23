@@ -27,8 +27,9 @@ public class CandidateResult {
     @JsonIgnore
     private Candidate candidate;
 
-    // FK -> candidate_review (có thể null nếu chưa có review)
+
     @ManyToOne(fetch = FetchType.LAZY)
+
     @JoinColumn(name = "review_id")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
