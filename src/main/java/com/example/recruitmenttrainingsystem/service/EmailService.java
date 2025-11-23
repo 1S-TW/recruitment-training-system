@@ -15,11 +15,11 @@ import org.thymeleaf.context.Context;
 public class EmailService {
 
     private final JavaMailSender mailSender;
-    private final TemplateEngine templateEngine;
+    private final TemplateEngine templateEngine; // Thêm TemplateEngine
 
     // --- SỬA HÀM NÀY ---
     public void sendVerificationEmail(String to, String token, String fullName) {
-        // Đây là URL trỏ về trang React (Frontend) của bạn
+
         // Nó sẽ được xử lý bởi React Router
         String link = "http://localhost:5173/verify?token=" + token;
 
