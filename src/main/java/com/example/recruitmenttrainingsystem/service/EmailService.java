@@ -19,8 +19,8 @@ public class EmailService {
 
     // --- SỬA HÀM NÀY ---
     public void sendVerificationEmail(String to, String token, String fullName) {
+        // Đây là URL trỏ về trang React (Frontend) của bạn
 
-        // Nó sẽ được xử lý bởi React Router
         String link = "http://localhost:5173/verify?token=" + token;
 
         // Chuẩn bị các biến để truyền vào template
