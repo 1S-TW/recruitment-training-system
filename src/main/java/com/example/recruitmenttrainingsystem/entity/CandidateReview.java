@@ -28,7 +28,7 @@ public class CandidateReview {
     @JsonIgnore
     private Candidate candidate;
 
-    // FK -> user (người review)
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @ToString.Exclude
