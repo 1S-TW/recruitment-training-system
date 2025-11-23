@@ -8,7 +8,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Technology {
+public class    Technology {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "technology_id")

@@ -20,7 +20,6 @@ public class TrainingController {
     private final TrainingService trainingService;
     private final InternRepository internRepository;
 
-
     @GetMapping
     public List<TrainingDto> getAll() {
         return trainingService.getAll();
@@ -47,11 +46,19 @@ public class TrainingController {
         return ResponseEntity.ok(trainingService.toTrainingDto(intern));
     }
 
-    // === NEW: ĐẾM SỐ LƯỢNG TTS THAM GIA ĐÀO TẠO THEO KẾ HOẠCH ===
+    // === ĐẾM SỐ LƯỢNG TTS THAM GIA ĐÀO TẠO THEO KẾ HOẠCH ===
     // Ví dụ: GET /api/trainings/count-by-plan?planId=5  -> 1, 2, 3, ...
     @GetMapping("/count-by-plan")
     public ResponseEntity<Long> countInternsByPlan(@RequestParam("planId") Long planId) {
         long count = internRepository.countByRecruitmentPlan_RecruitmentPlanId(planId);
+        return ResponseEntity.ok(count);
+    }
+
+    // === NEW: ĐẾM SỐ LƯỢNG TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ===
+    // Ví dụ: GET /api/trainings/delivered-count-by-plan?planId=5  -> 0, 1, 2, ...
+    @GetMapping("/delivered-count-by-plan")
+    public ResponseEntity<Long> countDeliveredByPlan(@RequestParam("planId") Long planId) {
+        long count = trainingService.countInternsDeliveredByPlan(planId);
         return ResponseEntity.ok(count);
     }
 }

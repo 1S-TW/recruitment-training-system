@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/service/TrainingService.java
 package com.example.recruitmenttrainingsystem.service;
 
 import com.example.recruitmenttrainingsystem.dto.CourseScoreDto;
@@ -24,6 +25,10 @@ public class TrainingService {
     private final CourseRepository courseRepository;
     private final CourseResultRepository courseResultRepository;
     private final SummaryResultRepository summaryResultRepository;
+
+    // NEW: thêm repository để cập nhật trạng thái kế hoạch & nhu cầu
+    private final RecruitmentPlanRepository recruitmentPlanRepository;
+    private final HrRequestRepository hrRequestRepository;
 
     private static final ZoneId ZONE_VN = ZoneId.of("Asia/Ho_Chi_Minh");
 
@@ -74,7 +79,7 @@ public class TrainingService {
         SummaryResult summary = summaryResultRepository.findByIntern_InternId(internId)
                 .orElseGet(() -> SummaryResult.builder()
                         .intern(intern)
-                        .internshipResult("NA")   // ← Đảm bảo không null ngay từ đầu
+                        .internshipResult("NA")   // đảm bảo không null
                         .build());
 
         summary.setFinalScore(dto.getSummaryResult());
@@ -92,11 +97,11 @@ public class TrainingService {
 
         summaryResultRepository.save(summary);
 
-        // === Trong method updateScores(), thêm đoạn này trước return ===
+        // === Cập nhật trạng thái thực tập của intern ===
         String newStatus;
 
         if ("Đã dừng thực tập".equals(intern.getInternStatus())) {
-            newStatus = "Đã dừng thực tập"; // Giữ nguyên nếu đã dừng
+            newStatus = "Đã dừng thực tập"; // giữ nguyên nếu đã dừng
         } else {
             // Kiểm tra tất cả môn đã có đủ 3 điểm chưa
             boolean allCompleted = courseResultRepository.findByIntern_InternId(internId).stream()
@@ -114,6 +119,8 @@ public class TrainingService {
         intern.setInternStatus(newStatus);
         internRepository.save(intern);
 
+        // NEW: Sau khi cập nhật intern, kiểm tra để CHỐT KẾ HOẠCH + NHU CẦU
+        updateRequestAndPlanStatusIfCompleted(intern);
 
         return toTrainingDto(intern);
     }
@@ -161,12 +168,67 @@ public class TrainingService {
                 .fullName(candidate != null ? candidate.getFullName() : null)
                 .startDate(intern.getStartDate())
                 .trainingDays(trainingDays)
-                .scores(scores)                                    // ← Đủ môn luôn
+                .scores(scores) // đủ môn luôn
                 .summaryResult(summary != null ? summary.getFinalScore() : null)
                 .teamReview(summary != null ? summary.getTeamEvaluation() : null)
                 .internshipResult(summary != null ? summary.getInternshipResult() : "NA")
                 .internStatus(intern.getInternStatus())
                 .build();
+    }
+
+    // ============== ĐẾM SỐ TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ==============
+    public long countInternsDeliveredByPlan(Long planId) {
+        return summaryResultRepository
+                .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndIntern_InternStatusAndInternshipResult(
+                        planId,
+                        "Đã hoàn thành",
+                        "PASS"
+                );
+    }
+
+    // ============== NEW: Nếu đủ số lượng bàn giao thì CHỐT KẾ HOẠCH + NHU CẦU ==============
+    @Transactional
+    protected void updateRequestAndPlanStatusIfCompleted(Intern intern) {
+        RecruitmentPlan plan = intern.getRecruitmentPlan();
+        if (plan == null) {
+            return;
+        }
+
+        HrRequest request = plan.getRequest();
+        if (request == null) {
+            return;
+        }
+
+        // Tổng số lượng nhân sự đầu ra yêu cầu (soLuong)
+        int outputRequired = 0;
+        if (request.getQuantityCandidates() != null) {
+            outputRequired = request.getQuantityCandidates().stream()
+                    .mapToInt(q -> q.getSoLuong() != null ? q.getSoLuong() : 0)
+                    .sum();
+        }
+
+        // Không cấu hình đầu ra thì thôi, không tự chốt
+        if (outputRequired <= 0) {
+            return;
+        }
+
+        long deliveredCount = countInternsDeliveredByPlan(plan.getRecruitmentPlanId());
+
+        if (deliveredCount >= outputRequired) {
+            // 1) Cập nhật kế hoạch nếu chưa COMPLETED
+            String planStatus = String.valueOf(plan.getStatus());
+            if (!"COMPLETED".equalsIgnoreCase(planStatus)) {
+                plan.setStatus("COMPLETED"); // hoặc enum nếu bạn dùng enum
+                recruitmentPlanRepository.save(plan);
+            }
+
+            // 2) Cập nhật nhu cầu nếu chưa COMPLETED
+            String requestStatus = String.valueOf(request.getStatus());
+            if (!"COMPLETED".equalsIgnoreCase(requestStatus)) {
+                request.setStatus("COMPLETED");
+                hrRequestRepository.save(request);
+            }
+        }
     }
 
     // ==================== TÍNH NGÀY LÀM VIỆC (T2-T6) ====================
