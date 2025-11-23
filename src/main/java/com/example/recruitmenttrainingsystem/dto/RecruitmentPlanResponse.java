@@ -27,6 +27,10 @@ public class RecruitmentPlanResponse {
     // NEW: tên người từ chối kế hoạch (nếu có)
     private String rejectedByName;
 
+    private Integer totalInput;   // SL đầu vào (gấp đôi nhu cầu)
+    private Long passCount;       // số candidate PASS
+    private Long internCount;     // số ứng viên đã nhận việc (thực tập sinh)
+
     // ========== NESTED DTOS ==========
 
     @Data

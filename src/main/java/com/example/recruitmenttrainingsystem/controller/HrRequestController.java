@@ -3,7 +3,6 @@ package com.example.recruitmenttrainingsystem.controller;
 
 import com.example.recruitmenttrainingsystem.dto.CreateHrRequestDto;
 import com.example.recruitmenttrainingsystem.dto.HrRequestResponse;
-import com.example.recruitmenttrainingsystem.entity.Technology;
 import com.example.recruitmenttrainingsystem.dto.PlanDefaultsDto;
 import com.example.recruitmenttrainingsystem.dto.RejectHrRequestDto;
 import com.example.recruitmenttrainingsystem.entity.Technology;

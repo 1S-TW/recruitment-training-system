@@ -46,4 +46,12 @@ public class TrainingController {
 
         return ResponseEntity.ok(trainingService.toTrainingDto(intern));
     }
+
+    // === NEW: ĐẾM SỐ LƯỢNG TTS THAM GIA ĐÀO TẠO THEO KẾ HOẠCH ===
+    // Ví dụ: GET /api/trainings/count-by-plan?planId=5  -> 1, 2, 3, ...
+    @GetMapping("/count-by-plan")
+    public ResponseEntity<Long> countInternsByPlan(@RequestParam("planId") Long planId) {
+        long count = internRepository.countByRecruitmentPlan_RecruitmentPlanId(planId);
+        return ResponseEntity.ok(count);
+    }
 }

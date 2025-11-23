@@ -14,7 +14,7 @@
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
-    public class Candidate {
+    public class    Candidate {
 
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)

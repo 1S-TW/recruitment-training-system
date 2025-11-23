@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/repository/RecruitmentPlanRepository.java
 package com.example.recruitmenttrainingsystem.repository;
 
 import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
@@ -12,7 +13,6 @@ import java.util.Optional;
 @Repository
 public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan, Long> {
 
-    // ✅ QUERY CŨ – GIỮ NGUYÊN
     @Query("""
         SELECT DISTINCT r FROM RecruitmentPlan r
         LEFT JOIN FETCH r.request req
@@ -24,10 +24,9 @@ public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan
     """)
     List<RecruitmentPlan> findByStatus(@Param("status") String status);
 
-    // ✅ THÊM MỚI: dùng cho dropdown "kế hoạch đã xác nhận" (không FETCH nặng)
-    // Status lưu ở DB là: NEW / CONFIRMED / REJECTED
+    // MỚI: dùng cho dropdown "kế hoạch đã xác nhận" (không FETCH nặng)
     List<RecruitmentPlan> findByStatusIgnoreCaseOrderByCreatedAtDesc(String status);
 
-    // Kiểm tra/ lấy Plan theo requestId (One-to-One) – CŨ, GIỮ NGUYÊN
+    // Kiểm tra/ lấy Plan theo requestId (One-to-One)
     Optional<RecruitmentPlan> findByRequest_RequestId(Long requestId);
 }

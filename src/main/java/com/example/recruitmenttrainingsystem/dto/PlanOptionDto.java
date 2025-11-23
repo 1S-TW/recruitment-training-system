@@ -1,16 +1,21 @@
 // src/main/java/com/example/recruitmenttrainingsystem/dto/PlanOptionDto.java
 package com.example.recruitmenttrainingsystem.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class PlanOptionDto {
-    private Long id;
-    private String name;
+
+    private Long planId;
+    private String planName;
+
+    public PlanOptionDto(Long planId, String planName) {
+        this.planId = planId;
+        this.planName = planName;
+    }
+
+    public Long getPlanId() {
+        return planId;
+    }
+
+    public String getPlanName() {
+        return planName;
+    }
 }
