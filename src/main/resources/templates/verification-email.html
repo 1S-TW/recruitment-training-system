@@ -33,7 +33,8 @@
         <p>Chào <strong th:text="${fullName}">Người dùng</strong>,</p>
         <p>Cảm ơn bạn đã đăng ký tài khoản. Vui lòng nhấn vào nút bên dưới để kích hoạt tài khoản của bạn và hoàn tất quá trình đăng ký.</p>
         <p style="text-align: center;">
-            <a th:href="${verificationLink}" class="button">Kích hoạt tài khoản</a>
+            <a th:href="${verificationLink}" style="display: inline-block; background-color: #004a99; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
+                Kích hoạt tài khoản</a>
         </p>
         <p>Liên kết này sẽ hết hạn trong 1 giờ.</p>
     </div>

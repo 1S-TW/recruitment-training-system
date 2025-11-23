@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/entity/HrRequest.java
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
@@ -7,10 +8,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-// (+) thêm import
-import com.fasterxml.jackson.annotation.JsonIgnore;           // (+)
-import lombok.EqualsAndHashCode;                            // (+)
-import lombok.ToString;                                     // (+)
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Entity
 @Table(name = "hr_request")
@@ -36,16 +36,22 @@ public class HrRequest {
     @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 
+    // Ghi chú chung (khi tạo / phê duyệt)
     @Column(name = "note", length = 255)
     private String note;
 
-    @ManyToOne @JoinColumn(name = "created_by")
+    // ✅ Lý do từ chối RIÊNG
+    @Column(name = "reject_reason", length = 500)
+    private String rejectReason;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by")
     private User createdBy;
 
     @OneToMany(mappedBy = "hrRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    @ToString.Exclude                       // (+) tránh đệ quy khi toString()
-    @EqualsAndHashCode.Exclude              // (+)
-    @JsonIgnore                             // (+) chặn vòng lặp khi serialize
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @JsonIgnore
     private List<QuantityCandidate> quantityCandidates = new ArrayList<>();
 
     @PrePersist

@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/dto/RecruitmentPlanResponse.java
 package com.example.recruitmenttrainingsystem.dto;
 
 import lombok.AllArgsConstructor;
@@ -22,6 +23,9 @@ public class RecruitmentPlanResponse {
     private String note;
 
     private SimpleHrRequestDto request;
+
+    // NEW: tên người từ chối kế hoạch (nếu có)
+    private String rejectedByName;
 
     // ========== NESTED DTOS ==========
 
