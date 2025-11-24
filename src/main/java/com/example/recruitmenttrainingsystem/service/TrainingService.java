@@ -187,8 +187,9 @@ public class TrainingService {
     }
 
     // ============== NEW: Nếu đủ số lượng bàn giao thì CHỐT KẾ HOẠCH + NHU CẦU ==============
-    @Transactional
-    protected void updateRequestAndPlanStatusIfCompleted(Intern intern) {
+    // Không cần @Transactional riêng vì đang chạy bên trong updateScores (đã có transaction).
+    // Để tránh cảnh báo proxy, để method ở dạng private helper.
+    private void updateRequestAndPlanStatusIfCompleted(Intern intern) {
         RecruitmentPlan plan = intern.getRecruitmentPlan();
         if (plan == null) {
             return;
