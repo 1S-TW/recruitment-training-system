@@ -43,6 +43,9 @@ public class TrainingController {
         intern.setInternStatus("Đã dừng thực tập");
         internRepository.save(intern);
 
+        // 🔹 NEW: sau khi dừng thực tập, kiểm tra xem kế hoạch/nhu cầu đã kết thúc chưa
+        trainingService.checkRequestAndPlanStatusByInternId(internId);
+
         return ResponseEntity.ok(trainingService.toTrainingDto(intern));
     }
 

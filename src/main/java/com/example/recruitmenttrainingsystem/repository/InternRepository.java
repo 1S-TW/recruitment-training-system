@@ -16,4 +16,10 @@ public interface InternRepository extends JpaRepository<Intern, Long> {
 
     // 🔹 THÊM: Đếm số intern của 1 kế hoạch tuyển dụng
     long countByRecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
+
+    // 🔹 NEW: Đếm số intern của 1 kế hoạch vẫn còn "Đang thực tập"
+    long countByRecruitmentPlan_RecruitmentPlanIdAndInternStatusIgnoreCase(
+            Long recruitmentPlanId,
+            String internStatus
+    );
 }

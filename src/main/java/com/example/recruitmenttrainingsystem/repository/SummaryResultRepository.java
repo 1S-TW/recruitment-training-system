@@ -4,6 +4,7 @@ package com.example.recruitmenttrainingsystem.repository;
 import com.example.recruitmenttrainingsystem.entity.SummaryResult;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface SummaryResultRepository extends JpaRepository<SummaryResult, Long> {
@@ -15,5 +16,11 @@ public interface SummaryResultRepository extends JpaRepository<SummaryResult, Lo
             Long recruitmentPlanId,
             String internStatus,
             String internshipResult
+    );
+
+    // MỚI: Đếm số intern của 1 kế hoạch đã được chấm kết quả (PASS hoặc FAIL)
+    long countByIntern_RecruitmentPlan_RecruitmentPlanIdAndInternshipResultIn(
+            Long recruitmentPlanId,
+            List<String> internshipResults
     );
 }

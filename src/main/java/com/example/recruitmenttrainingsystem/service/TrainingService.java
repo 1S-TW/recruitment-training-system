@@ -119,8 +119,8 @@ public class TrainingService {
         intern.setInternStatus(newStatus);
         internRepository.save(intern);
 
-        // NEW: Sau khi cập nhật intern, kiểm tra để CHỐT KẾ HOẠCH + NHU CẦU
-        updateRequestAndPlanStatusIfCompleted(intern);
+        // Sau khi cập nhật điểm, kiểm tra xem kế hoạch / nhu cầu đã kết thúc (thành công hoặc thất bại) chưa
+        checkRequestAndPlanStatusByInternId(internId);
 
         return toTrainingDto(intern);
     }
@@ -186,19 +186,17 @@ public class TrainingService {
                 );
     }
 
-    // ============== NEW: Nếu đủ số lượng bàn giao thì CHỐT KẾ HOẠCH + NHU CẦU ==============
-    // Không cần @Transactional riêng vì đang chạy bên trong updateScores (đã có transaction).
-    // Để tránh cảnh báo proxy, để method ở dạng private helper.
-    private void updateRequestAndPlanStatusIfCompleted(Intern intern) {
+    // ============== NEW: Kiểm tra trạng thái Kế hoạch + Nhu cầu theo internId ==============
+    @Transactional
+    public void checkRequestAndPlanStatusByInternId(Long internId) {
+        Intern intern = internRepository.findById(internId).orElse(null);
+        if (intern == null) return;
+
         RecruitmentPlan plan = intern.getRecruitmentPlan();
-        if (plan == null) {
-            return;
-        }
+        if (plan == null) return;
 
         HrRequest request = plan.getRequest();
-        if (request == null) {
-            return;
-        }
+        if (request == null) return;
 
         // Tổng số lượng nhân sự đầu ra yêu cầu (soLuong)
         int outputRequired = 0;
@@ -213,23 +211,69 @@ public class TrainingService {
             return;
         }
 
-        long deliveredCount = countInternsDeliveredByPlan(plan.getRecruitmentPlanId());
+        Long planId = plan.getRecruitmentPlanId();
 
+        // Số TTS đã bàn giao đủ điều kiện (PASS & ĐÃ HOÀN THÀNH)
+        long deliveredCount = countInternsDeliveredByPlan(planId);
+
+        // 1) Đã bàn giao đủ → thành công
         if (deliveredCount >= outputRequired) {
-            // 1) Cập nhật kế hoạch nếu chưa COMPLETED
             String planStatus = String.valueOf(plan.getStatus());
             if (!"COMPLETED".equalsIgnoreCase(planStatus)) {
-                plan.setStatus("COMPLETED"); // hoặc enum nếu bạn dùng enum
+                plan.setStatus("COMPLETED");
                 recruitmentPlanRepository.save(plan);
             }
 
-            // 2) Cập nhật nhu cầu nếu chưa COMPLETED
-            String requestStatus = String.valueOf(request.getStatus());
-            if (!"COMPLETED".equalsIgnoreCase(requestStatus)) {
+            String reqStatus = String.valueOf(request.getStatus());
+            if (!"COMPLETED".equalsIgnoreCase(reqStatus)) {
                 request.setStatus("COMPLETED");
                 hrRequestRepository.save(request);
             }
+            return;
         }
+
+        // 2) Chưa bàn giao đủ → chỉ kết luận khi TẤT CẢ TTS đã được chấm PASS/FAIL
+        long totalInterns = internRepository.countByRecruitmentPlan_RecruitmentPlanId(planId);
+
+        long evaluatedInterns = summaryResultRepository
+                .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndInternshipResultIn(
+                        planId,
+                        List.of("PASS", "FAIL")
+                );
+
+        if (totalInterns == 0 || evaluatedInterns < totalInterns) {
+            // vẫn còn TTS internshipResult = NA → chưa kết luận, để Đang chờ
+            return;
+        }
+
+        // 3) Tất cả TTS đã chấm, nhưng bàn giao < đầu ra → THẤT BẠI (nhu cầu vẫn COMPLETED)
+        String planName = plan.getPlanName() != null ? plan.getPlanName() : ("ID " + planId);
+
+        String reason;
+        if (deliveredCount == 0) {
+            reason = "Không có thực tập sinh nào đạt yêu cầu để bàn giao cho kế hoạch \"" + planName + "\".";
+        } else {
+            reason = "Chỉ bàn giao được " + deliveredCount + "/" + outputRequired +
+                    " thực tập sinh cho kế hoạch \"" + planName + "\".";
+        }
+
+        String formatted = "Lý do: " + reason;
+
+        request.setStatus("COMPLETED");        // nhu cầu đã hoàn thành nhưng kết quả là thất bại
+        request.setRejectReason(formatted);    // để FE đọc và hiển thị ở bước Bàn giao nhân sự
+        hrRequestRepository.save(request);
+
+        String planStatus = String.valueOf(plan.getStatus());
+        if (!"COMPLETED".equalsIgnoreCase(planStatus)) {
+            plan.setStatus("COMPLETED");
+            recruitmentPlanRepository.save(plan);
+        }
+    }
+
+    // (OPTIONAL) giữ helper cũ – giờ chỉ gọi sang hàm mới cho đồng bộ
+    private void updateRequestAndPlanStatusIfCompleted(Intern intern) {
+        if (intern == null || intern.getInternId() == null) return;
+        checkRequestAndPlanStatusByInternId(intern.getInternId());
     }
 
     // ==================== TÍNH NGÀY LÀM VIỆC (T2-T6) ====================
@@ -249,3 +293,4 @@ public class TrainingService {
         return days;
     }
 }
+    
