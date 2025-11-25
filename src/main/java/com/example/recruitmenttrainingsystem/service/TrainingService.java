@@ -216,7 +216,7 @@ public class TrainingService {
         // Số TTS đã bàn giao đủ điều kiện (PASS & ĐÃ HOÀN THÀNH)
         long deliveredCount = countInternsDeliveredByPlan(planId);
 
-        // 1) Đã bàn giao đủ → thành công
+        // 1) Đã bàn giao đủ → THÀNH CÔNG
         if (deliveredCount >= outputRequired) {
             String planStatus = String.valueOf(plan.getStatus());
             if (!"COMPLETED".equalsIgnoreCase(planStatus)) {
@@ -232,7 +232,9 @@ public class TrainingService {
             return;
         }
 
-        // 2) Chưa bàn giao đủ → chỉ kết luận khi TẤT CẢ TTS đã được chấm PASS/FAIL
+        // 2) CHƯA bàn giao đủ → chỉ được phép kết luận THẤT BẠI khi:
+        //    - ĐÃ tuyển ÍT NHẤT outputRequired TTS
+        //    - VÀ đã chấm kết quả (PASS/FAIL) cho ÍT NHẤT outputRequired TTS
         long totalInterns = internRepository.countByRecruitmentPlan_RecruitmentPlanId(planId);
 
         long evaluatedInterns = summaryResultRepository
@@ -241,12 +243,12 @@ public class TrainingService {
                         List.of("PASS", "FAIL")
                 );
 
-        if (totalInterns == 0 || evaluatedInterns < totalInterns) {
-            // vẫn còn TTS internshipResult = NA → chưa kết luận, để Đang chờ
+        if (totalInterns < outputRequired || evaluatedInterns < outputRequired) {
+            // Ví dụ: Đầu ra = 2, mới có 1 TTS PASS → vẫn đang tuyển tiếp → bước "Bàn giao nhân sự" phải ĐANG CHỜ
             return;
         }
 
-        // 3) Tất cả TTS đã chấm, nhưng bàn giao < đầu ra → THẤT BẠI (nhu cầu vẫn COMPLETED)
+        // 3) Đã có đủ (>= outputRequired) TTS được đánh giá nhưng bàn giao < outputRequired → THẤT BẠI
         String planName = plan.getPlanName() != null ? plan.getPlanName() : ("ID " + planId);
 
         String reason;
@@ -257,7 +259,8 @@ public class TrainingService {
                     " thực tập sinh cho kế hoạch \"" + planName + "\".";
         }
 
-        String formatted = "Lý do: " + reason;
+        // KHÔNG thêm "Lý do: " ở đây để tránh lặp "Lý do: Lý do: ..." trên FE
+        String formatted = reason;
 
         request.setStatus("COMPLETED");        // nhu cầu đã hoàn thành nhưng kết quả là thất bại
         request.setRejectReason(formatted);    // để FE đọc và hiển thị ở bước Bàn giao nhân sự
@@ -293,4 +296,3 @@ public class TrainingService {
         return days;
     }
 }
-    
