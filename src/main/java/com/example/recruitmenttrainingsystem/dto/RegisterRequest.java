@@ -15,7 +15,7 @@ public class RegisterRequest {
     @NotBlank
     @Pattern(
             regexp = "^(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$",
-            message = "Mật khẩu phải có ít nhất 1 chữ hoa và 1 ký tự đặc biệt"
+            message = "Mật khẩu phải có ít nhất 1 chữ hoa và 1 ký tự đặc biệt."
     )
 
     private String password;

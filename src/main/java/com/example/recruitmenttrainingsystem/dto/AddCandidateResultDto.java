@@ -32,5 +32,5 @@ public class AddCandidateResultDto {
     @NotBlank(message = "Vui lòng cập nhật trạng thái ứng viên.")
     private String candidateStatus; // "Đã có kết quả", "Không nhận việc", v.v.
 
-    private String note; // Lưu ý trong "Trạng Thái"
+    private String note; // Lưu ý trong " Trạng Thái "
 }

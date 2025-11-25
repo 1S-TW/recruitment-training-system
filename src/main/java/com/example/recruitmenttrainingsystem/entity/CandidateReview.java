@@ -42,7 +42,7 @@ public class CandidateReview {
     @Column(name = "candidate_status", nullable = false, length = 30)
     private String candidateStatus;  // ví dụ: "Đã có kết quả", "Đã nhận việc", ...
 
-    // 🔹 ngày cập nhật trạng thái (đặc biệt dùng cho "Đã nhận việc")
+    // 🔹 ngày cập nhật trạng thái (đặc biệt dùng cho "Đã nhận việc.")
     @Column(name = "review_date")
     private LocalDate reviewDate;
 }

@@ -13,7 +13,7 @@ public interface CandidateResultRepository extends JpaRepository<CandidateResult
     // ✅ 1. THÊM: Tìm kết quả MỚI NHẤT (id lớn nhất) của ứng viên
     Optional<CandidateResult> findFirstByCandidate_CandidateIdOrderByResultIdDesc(Long candidateId);
 
-    // ✅ 2. THÊM: Đếm số ứng viên (DISTINCT) đã PASS trong 1 Plan
+    // ✅ 2. THÊM: Đếm số ứng viên (DISTINCT) đã PASS trong một Plan
     @Query("SELECT COUNT(DISTINCT cr.candidate.candidateId) " +
             "FROM CandidateResult cr " +
             "WHERE cr.candidate.recruitmentPlan.recruitmentPlanId = :planId " +

@@ -95,7 +95,7 @@ public class UserService {
 
         return new LoginResponse(token, role, user.getFullName(),user.getId());
     }
-    // Forgot pasword
+    // FORGOT PASSWORD
     public void forgotPassword(ForgotPasswordRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
@@ -113,7 +113,7 @@ public class UserService {
 
         emailService.sendResetPasswordEmail(user.getEmail(), token);
     }
-    //reset password
+    //RESET PASSWORD
     public void resetPassword(ResetPasswordRequest request) {
 
         PasswordResetToken prt = passwordResetTokenRepository.findByToken(request.getToken())
@@ -131,7 +131,7 @@ public class UserService {
         // Xoá token sau khi dùng
         passwordResetTokenRepository.delete(prt);
     }
-    // change pasword
+    // CHANGE PASSWORD
     public void changePassword(String email, ChangePasswordRequest request) {
 
         User user = userRepository.findByEmail(email)

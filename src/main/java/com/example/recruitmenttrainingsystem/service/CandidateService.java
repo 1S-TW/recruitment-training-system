@@ -74,7 +74,7 @@ public class CandidateService {
         return toListDto(savedCandidate);
     }
 
-    // ================== LƯU KẾT QUẢ + TRẠNG THÁI ==================
+    // ================== LƯU KẾT QUẢ VÀ TRẠNG THÁI ==================
 
     @Transactional
     public CandidateListDto saveCandidateResult(Long candidateId,

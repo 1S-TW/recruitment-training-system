@@ -44,7 +44,7 @@
         @Column(name = "interview_date")
         private LocalDateTime interviewDate;
 
-        // ========= NEW: gắn với Review & Result =========
+        // ======== NEW: gắn với Review & Result ========
 
         @OneToMany(mappedBy = "candidate", cascade = CascadeType.ALL, orphanRemoval = true)
         @ToString.Exclude
