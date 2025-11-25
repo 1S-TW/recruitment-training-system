@@ -13,6 +13,11 @@ public class TrainingDto {
 
     private Long internId;
     private Long candidateId;
+
+    // 🔥 NEW: cần thiết để FE lọc
+    private Long recruitmentPlanId;
+    private String recruitmentPlanName;
+
     private String fullName;
 
     private LocalDate startDate;

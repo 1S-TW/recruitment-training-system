@@ -129,13 +129,9 @@ public class TrainingService {
     public TrainingDto toTrainingDto(Intern intern) {
         LocalDate today = LocalDate.now(ZONE_VN);
 
-        // 1. Lấy tất cả môn học trong hệ thống
         List<Course> allCourses = courseRepository.findAll();
-
-        // 2. Lấy điểm hiện có của intern này
         List<CourseResult> results = courseResultRepository.findByIntern_InternId(intern.getInternId());
 
-        // 3. Tạo danh sách điểm đầy đủ (chưa có = null)
         List<CourseScoreDto> scores = allCourses.stream()
                 .map(course -> {
                     CourseResult cr = results.stream()
@@ -153,28 +149,34 @@ public class TrainingService {
                 })
                 .toList();
 
-        // 4. SummaryResult
         SummaryResult summary = summaryResultRepository
                 .findByIntern_InternId(intern.getInternId())
                 .orElse(null);
 
-        long trainingDays = calculateWorkingDays(intern.getStartDate(), today);
-
         Candidate candidate = intern.getCandidate();
+        RecruitmentPlan plan = intern.getRecruitmentPlan();
+
+        long days = calculateWorkingDays(intern.getStartDate(), today);
 
         return TrainingDto.builder()
                 .internId(intern.getInternId())
                 .candidateId(candidate != null ? candidate.getCandidateId() : null)
                 .fullName(candidate != null ? candidate.getFullName() : null)
+
+                // 🔥 NEW: map ra FE
+                .recruitmentPlanId(plan != null ? plan.getRecruitmentPlanId() : null)
+                .recruitmentPlanName(plan != null ? plan.getPlanName() : null)
+
                 .startDate(intern.getStartDate())
-                .trainingDays(trainingDays)
-                .scores(scores) // đủ môn luôn
+                .trainingDays(days)
+                .scores(scores)
                 .summaryResult(summary != null ? summary.getFinalScore() : null)
                 .teamReview(summary != null ? summary.getTeamEvaluation() : null)
                 .internshipResult(summary != null ? summary.getInternshipResult() : "NA")
                 .internStatus(intern.getInternStatus())
                 .build();
     }
+
 
     // ============== ĐẾM SỐ TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ==============
     public long countInternsDeliveredByPlan(Long planId) {
