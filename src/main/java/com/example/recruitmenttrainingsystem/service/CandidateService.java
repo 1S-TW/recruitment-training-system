@@ -34,10 +34,11 @@ public class CandidateService {
     @Transactional(readOnly = true)
     public List<CandidateListDto> getCandidates(Long planId) {
 
+        // ✅ SỬA: Sử dụng hàm có sắp xếp OrderByCandidateIdDesc để đưa mới nhất lên đầu
         List<Candidate> candidates =
                 (planId != null)
-                        ? candidateRepository.findByRecruitmentPlan_RecruitmentPlanId(planId)
-                        : candidateRepository.findAll();
+                        ? candidateRepository.findByRecruitmentPlan_RecruitmentPlanIdOrderByCandidateIdDesc(planId)
+                        : candidateRepository.findAllByOrderByCandidateIdDesc();
 
         return candidates.stream()
                 .map(this::toListDto)
@@ -85,6 +86,37 @@ public class CandidateService {
         Candidate candidate = candidateRepository.findByIdWithPlanAndRequestDetails(candidateId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy ứng viên: " + candidateId));
 
+        // ✅ 1.1. [MỚI] Check trùng email khi sửa (trừ chính ứng viên này ra)
+        if (dto.getEmail() != null && !dto.getEmail().equals(candidate.getEmail())) {
+            boolean exists = candidateRepository.existsByEmailAndRecruitmentPlan_RecruitmentPlanIdAndCandidateIdNot(
+                    dto.getEmail(),
+                    candidate.getRecruitmentPlan().getRecruitmentPlanId(),
+                    candidateId
+            );
+            if (exists) {
+                throw new CustomException("Email này đã được sử dụng bởi ứng viên khác trong kế hoạch.");
+            }
+        }
+
+        // Cập nhật thông tin cá nhân
+        if (dto.getFullName() != null && !dto.getFullName().isBlank()) {
+            candidate.setFullName(dto.getFullName());
+        }
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            candidate.setEmail(dto.getEmail());
+        }
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isBlank()) {
+            candidate.setPhoneNumber(dto.getPhoneNumber());
+        }
+        if (dto.getCvLink() != null) { // cvLink được phép rỗng
+            candidate.setCvLink(dto.getCvLink());
+        }
+        if (dto.getInterviewDate() != null) {
+            candidate.setInterviewDate(dto.getInterviewDate());
+        }
+        // Lưu thay đổi thông tin ứng viên
+        candidateRepository.save(candidate);
+
         // 2. Lấy người chấm
         User reviewer = userRepository.findByEmail(reviewerEmail)
                 .orElseThrow(() -> new CustomException("Không tìm thấy user: " + reviewerEmail));
@@ -98,8 +130,9 @@ public class CandidateService {
                 .findFirstByCandidate_CandidateIdOrderByReviewIdDesc(candidateId)
                 .orElse(new CandidateReview());
 
+        // ✅ SỬA: Đổi logic check PASS -> Đạt
         boolean wasAlreadyPass = result.getFinalResult() != null
-                && result.getFinalResult().equalsIgnoreCase("PASS");
+                && result.getFinalResult().equalsIgnoreCase("Đạt");
         boolean isFirstTimeResult = (result.getResultId() == null);
 
         // trạng thái cũ
@@ -119,8 +152,8 @@ public class CandidateService {
             return toListDto(candidate);
         }
 
-        // 5. Giữ nguyên logic quota PASS
-        if (dto.getFinalResult().equalsIgnoreCase("PASS")) {
+        // 5. ✅ SỬA: Logic quota với "Đạt"
+        if ("Đạt".equalsIgnoreCase(dto.getFinalResult())) {
             if (!wasAlreadyPass) {
                 RecruitmentPlan plan = candidate.getRecruitmentPlan();
                 HrRequest request = plan.getRequest();
@@ -133,15 +166,14 @@ public class CandidateService {
                         .countDistinctPassCandidates(plan.getRecruitmentPlanId());
 
                 if (currentPassCount >= totalLimit) {
-                    throw new CustomException("Kế hoạch này đã đạt đủ số lượng 'PASS' (" +
-                            currentPassCount + "/" + totalLimit + "). Không thể chấm 'PASS' cho ứng viên này.");
+                    throw new CustomException("Kế hoạch này đã đạt đủ số lượng 'Đạt' (" +
+                            currentPassCount + "/" + totalLimit + "). Không thể chấm 'Đạt' cho ứng viên này.");
                 }
             }
         }
-// ... (Logic Quota PASS giữ nguyên, kết thúc ở khoảng dòng 134)
 
-        // 5.5. ✅ KIỂM TRA LOGIC VÔ LÝ: FAIL không thể là Đã nhận việc
-        if ("FAIL".equalsIgnoreCase(dto.getFinalResult())) {
+        // 5.5. ✅ SỬA: Logic check "Không đạt"
+        if ("Không đạt".equalsIgnoreCase(dto.getFinalResult())) {
             // Kiểm tra trạng thái mới có phải là "Đã nhận việc" hoặc "Đã xác nhận" (cũng là trạng thái cuối) không
             String statusNow = (dto.getCandidateStatus() == null)
                     ? ""
@@ -150,7 +182,7 @@ public class CandidateService {
             boolean isAcceptedNow = statusNow.contains("nhận việc") || statusNow.contains("xác nhận");
 
             if (isAcceptedNow) {
-                throw new CustomException("Lỗi logic: Không thể đặt trạng thái 'Đã nhận việc' nếu kết quả cuối cùng là 'FAIL'.");
+                throw new CustomException("Lỗi logic: Không thể đặt trạng thái 'Đã nhận việc' nếu kết quả cuối cùng là 'Không đạt'.");
             }
         }
 
@@ -245,8 +277,9 @@ public class CandidateService {
 
             if (status.equals("Chưa có kết quả") && finalResult != null) {
                 String r = finalResult.toUpperCase();
-                if (r.equals("PASS")) status = "Đã có kết quả";
-                else if (r.equals("FAIL")) status = "Không nhận việc";
+                // ✅ SỬA: Mapping hiển thị cho Đạt / Không đạt
+                if (r.equals("PASS") || r.equals("ĐẠT")) status = "Đã có kết quả";
+                else if (r.equals("FAIL") || r.equals("KHÔNG ĐẠT")) status = "Chưa có kết quả";
                 else status = finalResult;
             }
         }
@@ -276,4 +309,3 @@ public class CandidateService {
                 .build();
     }
 }
-    

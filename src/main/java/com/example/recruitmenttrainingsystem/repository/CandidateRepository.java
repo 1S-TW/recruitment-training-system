@@ -1,4 +1,3 @@
-// src/main/java/com/example/recruitmenttrainingsystem/repository/CandidateRepository.java
 package com.example.recruitmenttrainingsystem.repository;
 
 import com.example.recruitmenttrainingsystem.entity.Candidate;
@@ -11,9 +10,17 @@ import java.util.Optional;
 
 public interface CandidateRepository extends JpaRepository<Candidate, Long> {
 
-    List<Candidate> findByRecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
+    // 1. Check trùng email trong cùng plan, TRỪ ứng viên đang sửa (dùng khi update)
+    boolean existsByEmailAndRecruitmentPlan_RecruitmentPlanIdAndCandidateIdNot(String email, Long planId, Long candidateId);
 
+    // 2. Check trùng email khi tạo mới (giữ nguyên)
     boolean existsByEmailAndRecruitmentPlan_RecruitmentPlanId(String email, Long planId);
+
+    // 3. Lấy danh sách theo Plan, sắp xếp mới nhất lên đầu (ID giảm dần)
+    List<Candidate> findByRecruitmentPlan_RecruitmentPlanIdOrderByCandidateIdDesc(Long recruitmentPlanId);
+
+    // 4. Lấy tất cả, sắp xếp mới nhất lên đầu
+    List<Candidate> findAllByOrderByCandidateIdDesc();
 
     @Query("""
         SELECT c FROM Candidate c
@@ -25,7 +32,7 @@ public interface CandidateRepository extends JpaRepository<Candidate, Long> {
         """)
     Optional<Candidate> findByIdWithPlanAndRequestDetails(@Param("candidateId") Long candidateId);
 
-    // ===== CHO MÀN ĐÀO TẠO =====
+    // ... (giữ các hàm query khác nếu có)
     @Query("""
         SELECT DISTINCT c
         FROM Candidate c
