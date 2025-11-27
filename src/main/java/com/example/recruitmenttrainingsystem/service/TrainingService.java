@@ -79,7 +79,7 @@ public class TrainingService {
         SummaryResult summary = summaryResultRepository.findByIntern_InternId(internId)
                 .orElseGet(() -> SummaryResult.builder()
                         .intern(intern)
-                        .internshipResult("NA")   // đảm bảo không null
+                        .internshipResult("NA")
                         .build());
 
         summary.setFinalScore(dto.getSummaryResult());
@@ -98,10 +98,10 @@ public class TrainingService {
         summaryResultRepository.save(summary);
 
         // === Cập nhật trạng thái thực tập của intern ===
-        String newStatus;
+        String newStatus = "Đang thực tập"; // ✅ Khởi tạo giá trị mặc định để tránh lỗi
 
         if ("Đã dừng thực tập".equals(intern.getInternStatus())) {
-            newStatus = "Đã dừng thực tập"; // giữ nguyên nếu đã dừng
+            newStatus = "Đã dừng thực tập"; // Giữ nguyên nếu đã dừng
         } else {
             // Kiểm tra tất cả môn đã có đủ 3 điểm chưa
             boolean allCompleted = courseResultRepository.findByIntern_InternId(internId).stream()
@@ -109,17 +109,19 @@ public class TrainingService {
                             && cr.getPracticeScore() != null
                             && cr.getAttitudeScore() != null);
 
-            if (allCompleted && "PASS".equals(summary.getInternshipResult())) {
-                newStatus = "Đã hoàn thành";
-            } else {
-                newStatus = "Đang thực tập";
+            // ✅ Logic mới: Nếu đủ điểm các môn VÀ có kết quả (PASS hoặc FAIL) -> Đã hoàn thành
+            if (allCompleted) {
+                String res = summary.getInternshipResult();
+                if ("PASS".equals(res) || "FAIL".equals(res)) {
+                    newStatus = "Đã hoàn thành";
+                }
             }
         }
 
         intern.setInternStatus(newStatus);
         internRepository.save(intern);
 
-        // Sau khi cập nhật điểm, kiểm tra xem kế hoạch / nhu cầu đã kết thúc (thành công hoặc thất bại) chưa
+        // Sau khi cập nhật điểm, kiểm tra xem kế hoạch / nhu cầu đã kết thúc chưa
         checkRequestAndPlanStatusByInternId(internId);
 
         return toTrainingDto(intern);
