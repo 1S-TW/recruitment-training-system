@@ -265,4 +265,23 @@ public class HrRequestService {
                 hr.getRejectReason()
         );
     }
+
+
+    @Transactional(readOnly = true)
+    public List<HrRequestResponse> getRequestsByStatus(String status) {
+        return hrRequestRepository.findByStatusIgnoreCase(status)
+                .stream()
+                .map(this::toResponseWithTechs)
+                .toList();
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<HrRequestResponse> getRequestsByDateRange(LocalDate start, LocalDate end) {
+        return hrRequestRepository.findByCreatedAtBetween(start.atStartOfDay(), end.atTime(23, 59))
+                .stream()
+                .map(this::toResponseWithTechs)
+                .toList();
+    }
+
 }
