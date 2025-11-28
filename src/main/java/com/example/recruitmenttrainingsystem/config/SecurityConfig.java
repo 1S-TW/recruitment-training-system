@@ -23,7 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
-    private final JwtFilter jwtFilter;  // ✅ dùng JwtFilter, không dùng JwtAuthenticationFilter
+    private final JwtFilter jwtFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     var c = new org.springframework.web.cors.CorsConfiguration();
-                    c.setAllowedOrigins(java.util.List.of("http://localhost:5173")); // frontend port 5173
+                    c.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
                     c.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     c.setAllowedHeaders(java.util.List.of("*"));
                     c.setAllowCredentials(true);
@@ -54,17 +54,17 @@ public class SecurityConfig {
                         // Cho phép OPTIONS cho CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Public endpoints
+                        // ===== PUBLIC ENDPOINTS =====
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/ai/**").permitAll()
+                        // 👈 THÊM DÒNG NÀY
                         .requestMatchers("/error").permitAll()
 
-                        // Business endpoints (HR Request)
+                        // ===== BUSINESS ENDPOINTS (CẦN QUYỀN) =====
                         .requestMatchers(HttpMethod.GET, "/api/hr-request/**")
                         .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
-
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/create")
                         .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
-
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/update/**")
                         .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
 
@@ -72,7 +72,6 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 );
 
-        // ✅ Gắn JwtFilter vào filter chain
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

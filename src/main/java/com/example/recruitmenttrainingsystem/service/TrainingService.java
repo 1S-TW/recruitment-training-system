@@ -12,13 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.*;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional   // không để readOnly=true vì còn có các hàm ghi DB
 public class TrainingService {
 
     private final InternRepository internRepository;
@@ -30,11 +31,20 @@ public class TrainingService {
     private final RecruitmentPlanRepository recruitmentPlanRepository;
     private final HrRequestRepository hrRequestRepository;
 
-    private static final ZoneId ZONE_VN = ZoneId.of("Asia/Ho_Chi_Minh");
-
     // ==================== GET ALL ====================
     public List<TrainingDto> getAll() {
         return internRepository.findAll().stream()
+                .map(this::toTrainingDto)
+                .toList();
+    }
+
+    // ==================== NEW: GET BY PLAN ====================
+    public List<TrainingDto> getByPlan(Long planId) {
+        if (planId == null) {
+            return List.of();
+        }
+        return internRepository.findByRecruitmentPlan_RecruitmentPlanId(planId)
+                .stream()
                 .map(this::toTrainingDto)
                 .toList();
     }
@@ -109,7 +119,7 @@ public class TrainingService {
                             && cr.getPracticeScore() != null
                             && cr.getAttitudeScore() != null);
 
-            // ✅ Logic mới: Nếu đủ điểm các môn VÀ có kết quả (PASS hoặc FAIL) -> Đã hoàn thành
+            // ✅ Nếu đủ điểm các môn VÀ có kết quả (PASS hoặc FAIL) -> Đã hoàn thành
             if (allCompleted) {
                 String res = summary.getInternshipResult();
                 if ("PASS".equals(res) || "FAIL".equals(res)) {
@@ -127,15 +137,15 @@ public class TrainingService {
         return toTrainingDto(intern);
     }
 
-    // ==================== CHUYỂN ĐỔI DTO – LUÔN HIỆN ĐỦ MÔN ====================
+    // ==================== CHUYỂN ĐỔI DTO – HIỆN ĐỦ MÔN ====================
     public TrainingDto toTrainingDto(Intern intern) {
-        LocalDate today = LocalDate.now(ZONE_VN);
 
         // 1. Lấy tất cả môn học trong hệ thống
         List<Course> allCourses = courseRepository.findAll();
 
         // 2. Lấy điểm hiện có của intern này
-        List<CourseResult> results = courseResultRepository.findByIntern_InternId(intern.getInternId());
+        List<CourseResult> results =
+                courseResultRepository.findByIntern_InternId(intern.getInternId());
 
         // 3. Tạo danh sách điểm đầy đủ (chưa có = null)
         List<CourseScoreDto> scores = allCourses.stream()
@@ -160,17 +170,24 @@ public class TrainingService {
                 .findByIntern_InternId(intern.getInternId())
                 .orElse(null);
 
-        long trainingDays = calculateWorkingDays(intern.getStartDate(), today);
+        // 5. SỐ NGÀY THỰC TẬP: TẠM THỜI CHỈ ĐỌC TỪ DB, KHÔNG TỰ TÍNH LẠI
+        Integer storedDays = intern.getInternshipDays();
+        long trainingDays = storedDays != null ? storedDays.longValue() : 0L;
 
         Candidate candidate = intern.getCandidate();
 
         return TrainingDto.builder()
                 .internId(intern.getInternId())
                 .candidateId(candidate != null ? candidate.getCandidateId() : null)
+                .recruitmentPlanId(
+                        intern.getRecruitmentPlan() != null
+                                ? intern.getRecruitmentPlan().getRecruitmentPlanId()
+                                : null
+                )
                 .fullName(candidate != null ? candidate.getFullName() : null)
                 .startDate(intern.getStartDate())
-                .trainingDays(trainingDays)
-                .scores(scores) // đủ môn luôn
+                .trainingDays(trainingDays)                     // 👈 FE dùng cột "Số ngày TT"
+                .scores(scores)
                 .summaryResult(summary != null ? summary.getFinalScore() : null)
                 .teamReview(summary != null ? summary.getTeamEvaluation() : null)
                 .internshipResult(summary != null ? summary.getInternshipResult() : "NA")
@@ -208,14 +225,12 @@ public class TrainingService {
                     .sum();
         }
 
-        // Không cấu hình đầu ra thì thôi, không tự chốt
         if (outputRequired <= 0) {
             return;
         }
 
         Long planId = plan.getRecruitmentPlanId();
 
-        // Số TTS đã bàn giao đủ điều kiện (PASS & ĐÃ HOÀN THÀNH)
         long deliveredCount = countInternsDeliveredByPlan(planId);
 
         // 1) Đã bàn giao đủ → thành công
@@ -244,11 +259,9 @@ public class TrainingService {
                 );
 
         if (totalInterns == 0 || evaluatedInterns < totalInterns) {
-            // vẫn còn TTS internshipResult = NA → chưa kết luận, để Đang chờ
             return;
         }
 
-        // 3) Tất cả TTS đã chấm, nhưng bàn giao < đầu ra → THẤT BẠI (nhu cầu vẫn COMPLETED)
         String planName = plan.getPlanName() != null ? plan.getPlanName() : ("ID " + planId);
 
         String reason;
@@ -261,12 +274,12 @@ public class TrainingService {
 
         String formatted = "Lý do: " + reason;
 
-        request.setStatus("COMPLETED");        // nhu cầu đã hoàn thành nhưng kết quả là thất bại
-        request.setRejectReason(formatted);    // để FE đọc và hiển thị ở bước Bàn giao nhân sự
+        request.setStatus("COMPLETED");
+        request.setRejectReason(formatted);
         hrRequestRepository.save(request);
 
-        String planStatus = String.valueOf(plan.getStatus());
-        if (!"COMPLETED".equalsIgnoreCase(planStatus)) {
+        String planStatus2 = String.valueOf(plan.getStatus());
+        if (!"COMPLETED".equalsIgnoreCase(planStatus2)) {
             plan.setStatus("COMPLETED");
             recruitmentPlanRepository.save(plan);
         }
@@ -279,6 +292,7 @@ public class TrainingService {
     }
 
     // ==================== TÍNH NGÀY LÀM VIỆC (T2-T6) ====================
+    // 📝 Hàm này hiện chưa dùng vì đã tắt auto tính, nhưng mình giữ lại để sau này bật lại cho dễ
     private long calculateWorkingDays(LocalDate start, LocalDate end) {
         if (start == null || end == null || end.isBefore(start)) return 0;
 
@@ -295,4 +309,3 @@ public class TrainingService {
         return days;
     }
 }
-    

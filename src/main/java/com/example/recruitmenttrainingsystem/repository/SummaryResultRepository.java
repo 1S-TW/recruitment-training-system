@@ -11,16 +11,17 @@ public interface SummaryResultRepository extends JpaRepository<SummaryResult, Lo
 
     Optional<SummaryResult> findByIntern_InternId(Long internId);
 
-    // Đếm số intern thuộc một kế hoạch, đã hoàn thành & kết quả PASS
     long countByIntern_RecruitmentPlan_RecruitmentPlanIdAndIntern_InternStatusAndInternshipResult(
             Long recruitmentPlanId,
             String internStatus,
             String internshipResult
     );
 
-    // MỚI: Đếm số intern của 1 kế hoạch đã được chấm kết quả (PASS hoặc FAIL)
     long countByIntern_RecruitmentPlan_RecruitmentPlanIdAndInternshipResultIn(
             Long recruitmentPlanId,
             List<String> internshipResults
     );
+
+    // ⭐ NEW: Đếm theo kết quả thực tập (PASS / FAIL)
+    long countByInternshipResultIgnoreCase(String internshipResult);
 }
