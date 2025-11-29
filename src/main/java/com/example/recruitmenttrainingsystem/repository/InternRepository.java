@@ -26,6 +26,6 @@ public interface InternRepository extends JpaRepository<Intern, Long> {
     // ⭐ NEW – Đếm theo status PASS/FAIL (dùng cột internStatus)
     long countByInternStatusIgnoreCase(String internStatus);
 
-    // ⭐ NEW – Lấy danh sách intern theo kế hoạch tuyển dụng
+    // ⭐ NEW – Lấy danh sách intern theo kế hoạch (để AI phân tích tiến độ theo từng kế hoạch)
     List<Intern> findByRecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
 }

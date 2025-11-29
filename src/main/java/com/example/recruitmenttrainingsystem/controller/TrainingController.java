@@ -39,9 +39,7 @@ public class TrainingController {
         return ResponseEntity.ok(result);
     }
 
-    // === ENDPOINT DỪNG THỰC TẬP - CHẠY NGON 100% ===
-    // src/main/java/com/example/recruitmenttrainingsystem/controller/TrainingController.java
-
+    // === ENDPOINT DỪNG THỰC TẬP ===
     @PutMapping("/{internId}/stop")
     public ResponseEntity<TrainingDto> stopInternship(@PathVariable Long internId) {
         System.out.println(">>> ĐÃ VÀO ENDPOINT /stop - internId = " + internId);
@@ -61,7 +59,6 @@ public class TrainingController {
         return ResponseEntity.ok(trainingService.toTrainingDto(intern));
     }
 
-
     // === ĐẾM SỐ LƯỢNG TTS THAM GIA ĐÀO TẠO THEO KẾ HOẠCH ===
     // Ví dụ: GET /api/trainings/count-by-plan?planId=5  -> 1, 2, 3, ...
     @GetMapping("/count-by-plan")
@@ -70,7 +67,7 @@ public class TrainingController {
         return ResponseEntity.ok(count);
     }
 
-    // === NEW: ĐẾM SỐ LƯỢNG TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ===
+    // === ĐẾM SỐ LƯỢNG TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ===
     // Ví dụ: GET /api/trainings/delivered-count-by-plan?planId=5  -> 0, 1, 2, ...
     @GetMapping("/delivered-count-by-plan")
     public ResponseEntity<Long> countDeliveredByPlan(@RequestParam("planId") Long planId) {

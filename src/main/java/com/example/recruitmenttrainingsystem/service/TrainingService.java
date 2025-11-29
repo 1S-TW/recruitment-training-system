@@ -38,13 +38,17 @@ public class TrainingService {
                 .toList();
     }
 
-    // ==================== NEW: GET BY PLAN ====================
+    // ⭐ NEW: Lấy danh sách TTS theo kế hoạch tuyển dụng
     public List<TrainingDto> getByPlan(Long planId) {
         if (planId == null) {
             return List.of();
         }
-        return internRepository.findByRecruitmentPlan_RecruitmentPlanId(planId)
-                .stream()
+
+        return internRepository.findAll().stream()
+                .filter(intern ->
+                        intern.getRecruitmentPlan() != null
+                                && planId.equals(intern.getRecruitmentPlan().getRecruitmentPlanId())
+                )
                 .map(this::toTrainingDto)
                 .toList();
     }
@@ -286,13 +290,15 @@ public class TrainingService {
     }
 
     // (OPTIONAL) giữ helper cũ – giờ chỉ gọi sang hàm mới cho đồng bộ
+    @SuppressWarnings("unused")
     private void updateRequestAndPlanStatusIfCompleted(Intern intern) {
         if (intern == null || intern.getInternId() == null) return;
         checkRequestAndPlanStatusByInternId(intern.getInternId());
     }
 
     // ==================== TÍNH NGÀY LÀM VIỆC (T2-T6) ====================
-    // 📝 Hàm này hiện chưa dùng vì đã tắt auto tính, nhưng mình giữ lại để sau này bật lại cho dễ
+    // Hàm này hiện chưa dùng vì đã tắt auto tính, nhưng mình giữ lại để sau này bật lại cho dễ
+    @SuppressWarnings("unused")
     private long calculateWorkingDays(LocalDate start, LocalDate end) {
         if (start == null || end == null || end.isBefore(start)) return 0;
 
