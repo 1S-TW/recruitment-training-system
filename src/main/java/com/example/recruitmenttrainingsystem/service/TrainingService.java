@@ -167,6 +167,10 @@ public class TrainingService {
         return TrainingDto.builder()
                 .internId(intern.getInternId())
                 .candidateId(candidate != null ? candidate.getCandidateId() : null)
+                .recruitmentPlanId(
+                        intern.getRecruitmentPlan() != null ?
+                                intern.getRecruitmentPlan().getRecruitmentPlanId() : null
+                )
                 .fullName(candidate != null ? candidate.getFullName() : null)
                 .startDate(intern.getStartDate())
                 .trainingDays(trainingDays)

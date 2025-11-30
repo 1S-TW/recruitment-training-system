@@ -19,7 +19,7 @@ public class TrainingDto {
     private Long trainingDays;
 
     private List<CourseScoreDto> scores;
-
+    private Long recruitmentPlanId;
     private BigDecimal summaryResult;
     private BigDecimal teamReview;
     private String internshipResult;

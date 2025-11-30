@@ -23,7 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final CustomUserDetailsService userDetailsService;
-    private final JwtFilter jwtFilter;  // ✅ dùng JwtFilter, không dùng JwtAuthenticationFilter
+    private final JwtFilter jwtFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     var c = new org.springframework.web.cors.CorsConfiguration();
-                    c.setAllowedOrigins(java.util.List.of("http://localhost:5173")); // frontend port 5173
+                    c.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
                     c.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     c.setAllowedHeaders(java.util.List.of("*"));
                     c.setAllowCredentials(true);
@@ -51,30 +51,51 @@ public class SecurityConfig {
                 }))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép OPTIONS cho CORS
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
                         // Public endpoints
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        // Business endpoints (HR Request)
-                        .requestMatchers(HttpMethod.GET, "/api/hr-request/**")
-                        .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
+                        // --- 1. NHU CẦU NHÂN SỰ (HrRequest) ---
+                        // Xem: Admin, LEAD, QLDT (HR bị cấm)
+                        .requestMatchers(HttpMethod.GET, "/api/hr-request/**").hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT")
+                        // Tạo/Sửa: Admin, LEAD
+                        .requestMatchers(HttpMethod.POST, "/api/hr-request/create").hasAnyRole("SUPER_ADMIN", "LEAD")
+                        .requestMatchers(HttpMethod.POST, "/api/hr-request/update/**").hasAnyRole("SUPER_ADMIN", "LEAD")
+                        // Duyệt/Từ chối: Admin, QLDT
+                        .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/approve").hasAnyRole("SUPER_ADMIN", "QLDT")
+                        .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/reject").hasAnyRole("SUPER_ADMIN", "QLDT")
 
-                        .requestMatchers(HttpMethod.POST, "/api/hr-request/create")
-                        .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
+                        // --- 2. KẾ HOẠCH TUYỂN DỤNG (RecruitmentPlan) ---
+                        // Xem: Tất cả
+                        .requestMatchers(HttpMethod.GET, "/api/recruitment-plans/**").hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
+                        // Tạo: Admin, QLDT
+                        .requestMatchers(HttpMethod.POST, "/api/recruitment-plans").hasAnyRole("SUPER_ADMIN", "QLDT")
+                        // Phê duyệt/Từ chối: Admin, HR
+                        .requestMatchers(HttpMethod.PUT, "/api/recruitment-plans/*/confirm").hasAnyRole("SUPER_ADMIN", "HR")
+                        .requestMatchers(HttpMethod.POST, "/api/recruitment-plans/*/reject").hasAnyRole("SUPER_ADMIN", "HR")
 
-                        .requestMatchers(HttpMethod.POST, "/api/hr-request/update/**")
-                        .hasAnyRole("TRUONG_BO_PHAN", "SUPER_ADMIN", "HR")
+                        // --- 3. ỨNG VIÊN (Candidate) ---
+                        // ✅ [FIX] Cho phép LEAD xem (GET) để timeline hiển thị đúng số lượng ứng viên
+                        .requestMatchers(HttpMethod.GET, "/api/candidates/**").hasAnyRole("SUPER_ADMIN", "QLDT", "HR", "LEAD")
+                        // Tạo: Admin, HR
+                        .requestMatchers(HttpMethod.POST, "/api/candidates/create").hasAnyRole("SUPER_ADMIN", "HR")
+                        // Sửa/Chấm điểm: Admin, QLDT, HR
+                        .requestMatchers(HttpMethod.PUT, "/api/candidates/*/save-result").hasAnyRole("SUPER_ADMIN", "QLDT", "HR")
 
-                        // Các API khác yêu cầu đăng nhập
+                        // --- 4. ĐÀO TẠO (Training) ---
+                        // ✅ [FIX] Cho phép LEAD và HR xem (GET) để timeline hiển thị đúng tiến độ đào tạo/bàn giao
+                        .requestMatchers(HttpMethod.GET, "/api/trainings/**").hasAnyRole("SUPER_ADMIN", "QLDT", "HR", "LEAD")
+                        // Các thao tác sửa đổi (PUT/POST/DELETE) vẫn chỉ dành cho Admin và QLDT
+                        .requestMatchers("/api/trainings/**").hasAnyRole("SUPER_ADMIN", "QLDT")
+
+                        // Admin Only endpoints
+                        .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
+
                         .anyRequest().authenticated()
                 );
 
-        // ✅ Gắn JwtFilter vào filter chain
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 }
