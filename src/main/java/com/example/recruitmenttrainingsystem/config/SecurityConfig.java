@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/config/SecurityConfig.java
 package com.example.recruitmenttrainingsystem.config;
 
 import com.example.recruitmenttrainingsystem.security.JwtFilter;
@@ -57,36 +58,36 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
 
                         // --- 1. NHU CẦU NHÂN SỰ (HrRequest) ---
-                        // Xem: Admin, LEAD, QLDT (HR bị cấm)
-                        .requestMatchers(HttpMethod.GET, "/api/hr-request/**").hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT")
-                        // Tạo/Sửa: Admin, LEAD
+                        // Xem: Tất cả
+                        .requestMatchers(HttpMethod.GET, "/api/hr-request/**").hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
+                        // Tạo/Sửa: Chỉ LEAD và ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/create").hasAnyRole("SUPER_ADMIN", "LEAD")
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/update/**").hasAnyRole("SUPER_ADMIN", "LEAD")
-                        // Duyệt/Từ chối: Admin, QLDT
-                        .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/approve").hasAnyRole("SUPER_ADMIN", "QLDT")
-                        .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/reject").hasAnyRole("SUPER_ADMIN", "QLDT")
+                        // Duyệt/Từ chối: Chỉ HR và ADMIN
+                        .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/approve").hasAnyRole("SUPER_ADMIN", "HR")
+                        .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/reject").hasAnyRole("SUPER_ADMIN", "HR")
 
                         // --- 2. KẾ HOẠCH TUYỂN DỤNG (RecruitmentPlan) ---
                         // Xem: Tất cả
                         .requestMatchers(HttpMethod.GET, "/api/recruitment-plans/**").hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
-                        // Tạo: Admin, QLDT
-                        .requestMatchers(HttpMethod.POST, "/api/recruitment-plans").hasAnyRole("SUPER_ADMIN", "QLDT")
-                        // Phê duyệt/Từ chối: Admin, HR
-                        .requestMatchers(HttpMethod.PUT, "/api/recruitment-plans/*/confirm").hasAnyRole("SUPER_ADMIN", "HR")
-                        .requestMatchers(HttpMethod.POST, "/api/recruitment-plans/*/reject").hasAnyRole("SUPER_ADMIN", "HR")
+                        // Tạo: HR và Admin (QLDT không tạo)
+                        .requestMatchers(HttpMethod.POST, "/api/recruitment-plans").hasAnyRole("SUPER_ADMIN", "HR")
+                        // ✅ Phê duyệt/Từ chối: Admin và QLDT (Training Manager)
+                        .requestMatchers(HttpMethod.PUT, "/api/recruitment-plans/*/confirm").hasAnyRole("SUPER_ADMIN", "QLDT")
+                        .requestMatchers(HttpMethod.POST, "/api/recruitment-plans/*/reject").hasAnyRole("SUPER_ADMIN", "QLDT")
 
                         // --- 3. ỨNG VIÊN (Candidate) ---
-                        // ✅ [FIX] Cho phép LEAD xem (GET) để timeline hiển thị đúng số lượng ứng viên
+                        // Xem: Tất cả
                         .requestMatchers(HttpMethod.GET, "/api/candidates/**").hasAnyRole("SUPER_ADMIN", "QLDT", "HR", "LEAD")
-                        // Tạo: Admin, HR
+                        // Tạo: HR và Admin
                         .requestMatchers(HttpMethod.POST, "/api/candidates/create").hasAnyRole("SUPER_ADMIN", "HR")
-                        // Sửa/Chấm điểm: Admin, QLDT, HR
+                        // Sửa/Chấm điểm: HR, QLDT, Admin
                         .requestMatchers(HttpMethod.PUT, "/api/candidates/*/save-result").hasAnyRole("SUPER_ADMIN", "QLDT", "HR")
 
                         // --- 4. ĐÀO TẠO (Training) ---
-                        // ✅ [FIX] Cho phép LEAD và HR xem (GET) để timeline hiển thị đúng tiến độ đào tạo/bàn giao
-                        .requestMatchers(HttpMethod.GET, "/api/trainings/**").hasAnyRole("SUPER_ADMIN", "QLDT", "HR", "LEAD")
-                        // Các thao tác sửa đổi (PUT/POST/DELETE) vẫn chỉ dành cho Admin và QLDT
+                        // Xem: Tất cả (HR, LEAD xem list, QLDT/Admin thao tác)
+                        .requestMatchers(HttpMethod.GET, "/api/trainings/**").hasAnyRole("SUPER_ADMIN", "QLDT", "LEAD", "HR")
+                        // Sửa/Chấm điểm/Dừng: Chỉ QLDT và Admin
                         .requestMatchers("/api/trainings/**").hasAnyRole("SUPER_ADMIN", "QLDT")
 
                         // Admin Only endpoints
