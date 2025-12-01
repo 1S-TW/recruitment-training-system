@@ -7,7 +7,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,19 +21,29 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        System.out.println("✅ User login detected: " + user.getEmail()
-                + " | Role: " + user.getRole().getRoleName());
+        // ✅ Kiểm tra status
+        boolean enabled = user.isStatus() && user.isEmailVerified();
 
-        boolean enabled = user.isStatus() && user.isEmailVerified(); // ✅ active & email verified
+        // ✅ Xử lý Role (tránh lỗi Null khi user chưa có role)
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        if (user.getRole() != null) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName()));
+        } else {
+            // Nếu không có role, gán quyền mặc định thấp nhất hoặc để trống
+            // authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        }
+
+        System.out.println("✅ User login: " + user.getEmail()
+                + " | Role: " + (user.getRole() != null ? user.getRole().getRoleName() : "NONE"));
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                user.getPasswordHash(),   // ✅ dùng passwordHash
-                enabled,                  // ✅ isEnabled()
+                user.getPasswordHash(),
+                enabled,                  // isEnabled()
                 true,                     // accountNonExpired
                 true,                     // credentialsNonExpired
                 true,                     // accountNonLocked
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName()))
+                authorities
         );
     }
 }
