@@ -22,7 +22,8 @@ public class Course {
 
     @Column(length = 500)
     private String description;
-
+    @Column(name = "duration_days")
+    private Integer durationDays;
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     @Builder.Default

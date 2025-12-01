@@ -4,7 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
+import org.springframework.dao.DataIntegrityViolationException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,5 +41,17 @@ public class GlobalExceptionHandler {
             errors.put("message", errorMessage);
         });
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    }
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDatabaseException(DataIntegrityViolationException ex) {
+        Map<String, String> response = new HashMap<>();
+
+        // Log lỗi ra console để dev xem (nếu cần)
+        System.err.println("Database Error: " + ex.getMessage());
+
+        // Trả về thông báo thân thiện cho người dùng
+        response.put("message", "Lỗi dữ liệu: Không thể lưu. Vui lòng kiểm tra lại thông tin (có thể do thiếu trường bắt buộc hoặc dữ liệu không hợp lệ).");
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 }
