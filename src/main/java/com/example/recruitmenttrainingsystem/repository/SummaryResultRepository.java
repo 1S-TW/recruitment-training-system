@@ -24,4 +24,7 @@ public interface SummaryResultRepository extends JpaRepository<SummaryResult, Lo
 
     // ⭐ NEW: Đếm theo kết quả thực tập (PASS / FAIL)
     long countByInternshipResultIgnoreCase(String internshipResult);
+
+    // ⭐ NEW: Lấy toàn bộ SummaryResult theo kế hoạch
+    List<SummaryResult> findByIntern_RecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
 }

@@ -24,9 +24,12 @@ public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan
     """)
     List<RecruitmentPlan> findByStatus(@Param("status") String status);
 
-    // MỚI: dùng cho dropdown "kế hoạch đã xác nhận" (không FETCH nặng)
+    // Dùng cho dropdown "kế hoạch đã xác nhận" (không FETCH nặng)
     List<RecruitmentPlan> findByStatusIgnoreCaseOrderByCreatedAtDesc(String status);
 
     // Kiểm tra/ lấy Plan theo requestId (One-to-One)
     Optional<RecruitmentPlan> findByRequest_RequestId(Long requestId);
+
+    // ⭐ NEW: tìm kế hoạch theo từ khóa trong tên (phục vụ hỏi điểm TB theo keyword, vd: "qq")
+    List<RecruitmentPlan> findByPlanNameContainingIgnoreCase(String keyword);
 }

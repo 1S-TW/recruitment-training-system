@@ -174,9 +174,18 @@ public class TrainingService {
                 .findByIntern_InternId(intern.getInternId())
                 .orElse(null);
 
-        // 5. SỐ NGÀY THỰC TẬP: TẠM THỜI CHỈ ĐỌC TỪ DB, KHÔNG TỰ TÍNH LẠI
-        Integer storedDays = intern.getInternshipDays();
-        long trainingDays = storedDays != null ? storedDays.longValue() : 0L;
+        // 5. SỐ NGÀY THỰC TẬP:
+        //    - Tạm thời tính theo công thức:
+        //        Số ngày TT = số ngày làm việc (T2–T6)
+        //        từ ngày bắt đầu -> (ngày kết thúc nếu có, ngược lại là ngày hiện tại)
+        //    - Đồng thời GHI LẠI vào cột internship_days trong DB.
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = intern.getEndDate() != null ? intern.getEndDate() : today;
+
+        long trainingDays = calculateWorkingDays(intern.getStartDate(), endDate);
+
+        // Lưu vào DB (entity đang managed trong transaction -> tự flush khi commit)
+        intern.setInternshipDays((int) trainingDays);
 
         Candidate candidate = intern.getCandidate();
 
@@ -297,8 +306,6 @@ public class TrainingService {
     }
 
     // ==================== TÍNH NGÀY LÀM VIỆC (T2-T6) ====================
-    // Hàm này hiện chưa dùng vì đã tắt auto tính, nhưng mình giữ lại để sau này bật lại cho dễ
-    @SuppressWarnings("unused")
     private long calculateWorkingDays(LocalDate start, LocalDate end) {
         if (start == null || end == null || end.isBefore(start)) return 0;
 
