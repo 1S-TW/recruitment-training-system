@@ -25,4 +25,5 @@ public class TrainingDto {
     private String internshipResult;
 
     private String internStatus;
+
 }

@@ -14,12 +14,18 @@ public interface InternRepository extends JpaRepository<Intern, Long> {
     // Lấy danh sách intern theo trạng thái (Đang thực tập, Đã kết thúc...)
     List<Intern> findByInternStatusIgnoreCase(String internStatus);
 
-    // 🔹 THÊM: Đếm số intern của 1 kế hoạch tuyển dụng
+    // Đếm số intern của 1 kế hoạch tuyển dụng
     long countByRecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
 
-    // 🔹 NEW: Đếm số intern của 1 kế hoạch vẫn còn "Đang thực tập"
+    // Đếm số intern còn "Đang thực tập"
     long countByRecruitmentPlan_RecruitmentPlanIdAndInternStatusIgnoreCase(
             Long recruitmentPlanId,
             String internStatus
     );
+
+    // ⭐ NEW – Đếm theo status PASS/FAIL (dùng cột internStatus)
+    long countByInternStatusIgnoreCase(String internStatus);
+
+    // ⭐ NEW – Lấy danh sách intern theo kế hoạch (để AI phân tích tiến độ theo từng kế hoạch)
+    List<Intern> findByRecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
 }

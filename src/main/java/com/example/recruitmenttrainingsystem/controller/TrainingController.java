@@ -25,6 +25,13 @@ public class TrainingController {
         return trainingService.getAll();
     }
 
+    // ⭐ NEW: Lấy danh sách TTS theo kế hoạch tuyển dụng
+    // Ví dụ: GET /api/trainings/by-plan?planId=5
+    @GetMapping("/by-plan")
+    public ResponseEntity<List<TrainingDto>> getByPlan(@RequestParam("planId") Long planId) {
+        return ResponseEntity.ok(trainingService.getByPlan(planId));
+    }
+
     @PutMapping("/{internId}/scores")
     public ResponseEntity<TrainingDto> updateScores(@PathVariable Long internId,
                                                     @RequestBody TrainingScoreDto dto) {
@@ -32,18 +39,21 @@ public class TrainingController {
         return ResponseEntity.ok(result);
     }
 
-    // === ENDPOINT DỪNG THỰC TẬP - CHẠY NGON 100% ===
+    // === ENDPOINT DỪNG THỰC TẬP ===
     @PutMapping("/{internId}/stop")
     public ResponseEntity<TrainingDto> stopInternship(@PathVariable Long internId) {
-        System.out.println(">>> ĐÃ VÀO ENDPOINT /stop - internId = " + internId); // LOG ĐỂ CHECK
+        System.out.println(">>> ĐÃ VÀO ENDPOINT /stop - internId = " + internId);
 
         Intern intern = internRepository.findById(internId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy thực tập sinh ID: " + internId));
 
+        // set trạng thái & ngày kết thúc thực tập
         intern.setInternStatus("Đã dừng thực tập");
+        intern.setEndDate(java.time.LocalDate.now()); // 👈 ngày dừng thực tập
+
         internRepository.save(intern);
 
-        // 🔹 NEW: sau khi dừng thực tập, kiểm tra xem kế hoạch/nhu cầu đã kết thúc chưa
+        // Sau khi dừng thực tập, kiểm tra xem kế hoạch/nhu cầu đã kết thúc chưa
         trainingService.checkRequestAndPlanStatusByInternId(internId);
 
         return ResponseEntity.ok(trainingService.toTrainingDto(intern));
@@ -57,7 +67,7 @@ public class TrainingController {
         return ResponseEntity.ok(count);
     }
 
-    // === NEW: ĐẾM SỐ LƯỢNG TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ===
+    // === ĐẾM SỐ LƯỢNG TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ===
     // Ví dụ: GET /api/trainings/delivered-count-by-plan?planId=5  -> 0, 1, 2, ...
     @GetMapping("/delivered-count-by-plan")
     public ResponseEntity<Long> countDeliveredByPlan(@RequestParam("planId") Long planId) {
