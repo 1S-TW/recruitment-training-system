@@ -109,7 +109,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/trainings/**")
                         .hasAnyRole("SUPER_ADMIN", "QLDT")
 
-                        // --- 5. ADMIN ONLY ---
+                        // --- 5. THÔNG BÁO (Notification) ---
+                        .requestMatchers("/api/notifications/**")
+                        .hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
+
+                        // --- 6. ADMIN ONLY ---
                         .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
 
                         // Các request còn lại phải đăng nhập

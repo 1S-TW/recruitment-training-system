@@ -34,6 +34,7 @@ public class HrRequestService {
     private final TechnologyRepository technologyRepository;
     private final QuantityCandidateRepository quantityCandidateRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService; // ⭐ THÊM
 
     // ================== QUERY ==================
 
@@ -84,6 +85,9 @@ public class HrRequestService {
             qc.setSoLuong(tq.getSoLuong());
             quantityCandidateRepository.save(qc);
         }
+
+        // ⭐ BẮN NOTIFICATION: LEAD -> HR
+        notificationService.notify_HrRequestCreated(saved, user);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("message", "Yêu cầu nhân sự đã được tạo thành công!");
@@ -164,6 +168,12 @@ public class HrRequestService {
         }
 
         HrRequest saved = hrRequestRepository.save(req);
+
+        // ⭐ HR -> LEAD
+        if (actor != null) {
+            notificationService.notify_HrRequestApproved(saved, actor);
+        }
+
         return toResponseWithTechs(saved);
     }
 
@@ -200,6 +210,12 @@ public class HrRequestService {
         req.setRejectReason(formatted);
 
         HrRequest saved = hrRequestRepository.save(req);
+
+        // ⭐ HR -> LEAD
+        if (currentUser != null) {
+            notificationService.notify_HrRequestRejected(saved, currentUser);
+        }
+
         return toResponseWithTechs(saved);
     }
 

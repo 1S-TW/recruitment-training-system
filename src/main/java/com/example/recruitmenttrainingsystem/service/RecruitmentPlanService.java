@@ -28,6 +28,7 @@ public class RecruitmentPlanService {
     private final RecruitmentPlanRepository recruitmentPlanRepository;
     private final HrRequestRepository hrRequestRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService; // ⭐ THÊM
 
     // 🔹 Dùng để đếm ứng viên PASS / Intern cho từng kế hoạch
     private final CandidateResultRepository candidateResultRepository;
@@ -82,6 +83,11 @@ public class RecruitmentPlanService {
             hrRequestRepository.save(req);
         }
 
+        // ⭐ HR -> QLDT
+        if (actor != null) {
+            notificationService.notify_PlanCreated(saved, actor);
+        }
+
         return saved;
     }
 
@@ -114,6 +120,11 @@ public class RecruitmentPlanService {
                 // Yêu cầu vẫn phải "Đang tiến hành" vì chưa xong các bước quản lý ứng viên + đào tạo
                 req.setStatus("IN_PROGRESS");
                 hrRequestRepository.save(req);
+            }
+
+            // ⭐ QLDT -> HR + LEAD
+            if (actor != null) {
+                notificationService.notify_PlanConfirmed(plan, actor);
             }
         }
 
@@ -163,6 +174,11 @@ public class RecruitmentPlanService {
 
             req.setRejectReason(combinedReason);
             hrRequestRepository.save(req);
+        }
+
+        // ⭐ QLDT -> HR
+        if (actor != null) {
+            notificationService.notify_PlanRejected(plan, actor);
         }
 
         return toResponse(plan);
