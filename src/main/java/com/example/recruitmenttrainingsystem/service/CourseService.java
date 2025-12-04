@@ -1,3 +1,4 @@
+// src/main/java/com/example/recruitmenttrainingsystem/service/CourseService.java
 package com.example.recruitmenttrainingsystem.service;
 
 import com.example.recruitmenttrainingsystem.dto.CourseDto;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -26,25 +26,31 @@ public class CourseService {
 
     // ===================== 1. LẤY DANH SÁCH =====================
     public List<Course> getAllCourses() {
-        // Sắp xếp theo ID tăng dần để list không bị nhảy khi F5
-        return courseRepository.findAll(Sort.by(Sort.Direction.ASC, "courseId"));
+        // 🔁 Sort theo displayOrder trước, rồi courseId để ổn định
+        return courseRepository.findAll(
+                Sort.by(Sort.Direction.ASC, "displayOrder", "courseId")
+        );
     }
 
     // ===================== 2. TẠO MỚI (Admin dùng) =====================
     @Transactional
     public Course createCourse(CourseDto dto) {
         // Validate trùng tên
-        if (courseRepository.findByCourseName(dto.getCourseName()).isPresent()) {
-            throw new CustomException("Tên môn học đã tồn tại: " + dto.getCourseName());
-        }
+        courseRepository.findByCourseName(dto.getCourseName())
+                .ifPresent(c -> {
+                    throw new CustomException("Tên môn học đã tồn tại: " + dto.getCourseName());
+                });
+
+        // đặt thứ tự mặc định = số lượng môn hiện có + 1
+        int nextOrder = (int) (courseRepository.count() + 1);
 
         Course course = Course.builder()
                 .courseName(dto.getCourseName())
                 .description(dto.getDescription())
                 .durationDays(dto.getDurationDays()) // Lưu số ngày học
+                .displayOrder(nextOrder)             // 🔴 NEW
                 .build();
 
-        // Gọi hàm addCourse bên dưới để khởi tạo dữ liệu cho các intern hiện có
         return addCourse(course);
     }
 
@@ -65,6 +71,7 @@ public class CourseService {
         course.setCourseName(dto.getCourseName());
         course.setDescription(dto.getDescription());
         course.setDurationDays(dto.getDurationDays());
+        // displayOrder giữ nguyên, không đụng
 
         return courseRepository.save(course);
     }
@@ -75,8 +82,6 @@ public class CourseService {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new CustomException("Môn học không tồn tại"));
 
-        // Kiểm tra an toàn: Chỉ cho xóa nếu chưa có sinh viên nào có điểm
-        // (Tức là toàn bộ CourseResult liên quan đều có điểm là null)
         boolean hasData = course.getCourseResults().stream()
                 .anyMatch(cr -> cr.getTotalScore() != null
                         || cr.getTheoryScore() != null
@@ -86,10 +91,22 @@ public class CourseService {
             throw new CustomException("Không thể xóa môn học này vì đã có dữ liệu điểm số của thực tập sinh.");
         }
 
-        // Nếu an toàn, xóa các bản ghi CourseResult rỗng trước
         courseResultRepository.deleteAll(course.getCourseResults());
-        // Sau đó xóa Course
         courseRepository.delete(course);
+    }
+
+    // ===================== 5. SẮP XẾP LẠI THỨ TỰ (DRAG & DROP) =====================
+    @Transactional
+    public void reorderCourses(List<Long> courseIds) {
+        if (courseIds == null || courseIds.isEmpty()) return;
+
+        int order = 1;
+        for (Long id : courseIds) {
+            Course c = courseRepository.findById(id)
+                    .orElseThrow(() -> new CustomException("Không tìm thấy môn học ID: " + id));
+            c.setDisplayOrder(order++); // set lại thứ tự theo đúng array FE gửi lên
+            // không cần save từng cái – JPA dirty checking sẽ tự flush khi kết thúc transaction
+        }
     }
 
     // ===================== LOGIC CORE: Thêm môn & Init data =====================
@@ -104,7 +121,6 @@ public class CourseService {
             CourseResult cr = CourseResult.builder()
                     .course(saved)
                     .intern(intern)
-                    // QUAN TRỌNG: Để null thay vì ZERO để biết là "Chưa học"
                     .totalScore(null)
                     .theoryScore(null)
                     .practiceScore(null)
