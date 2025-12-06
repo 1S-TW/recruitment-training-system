@@ -1,14 +1,16 @@
-// src/main/java/com/example/recruitmenttrainingsystem/service/AIService.java
 package com.example.recruitmenttrainingsystem.service;
 
 import com.example.recruitmenttrainingsystem.entity.Intern;
 import com.example.recruitmenttrainingsystem.entity.RecruitmentPlan;
 import com.example.recruitmenttrainingsystem.entity.SummaryResult;
 import com.example.recruitmenttrainingsystem.entity.Course;
+import com.example.recruitmenttrainingsystem.entity.CourseResult;
 import com.example.recruitmenttrainingsystem.repository.InternRepository;
 import com.example.recruitmenttrainingsystem.repository.SummaryResultRepository;
 import com.example.recruitmenttrainingsystem.repository.CourseRepository;
+import com.example.recruitmenttrainingsystem.repository.CourseResultRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -30,7 +32,8 @@ public class AIService {
 
     private final InternRepository internRepository;
     private final SummaryResultRepository summaryResultRepository;
-    private final CourseRepository courseRepository; // 👈 NEW
+    private final CourseRepository courseRepository;
+    private final CourseResultRepository courseResultRepository;   // 👈 NEW
 
     // ⭐ Thông điệp fallback cho mọi trường hợp không hiểu / lỗi
     private static final String FALLBACK_MESSAGE =
@@ -40,12 +43,14 @@ public class AIService {
                      ObjectMapper objectMapper,
                      InternRepository internRepository,
                      SummaryResultRepository summaryResultRepository,
-                     CourseRepository courseRepository) { // 👈 NEW param
+                     CourseRepository courseRepository,
+                     CourseResultRepository courseResultRepository) {   // 👈 thêm tham số
         this.groqClient = groqClient;
         this.objectMapper = objectMapper;
         this.internRepository = internRepository;
         this.summaryResultRepository = summaryResultRepository;
-        this.courseRepository = courseRepository; // 👈 NEW
+        this.courseRepository = courseRepository;
+        this.courseResultRepository = courseResultRepository;         // 👈 gán field
     }
 
     /**
@@ -308,11 +313,13 @@ public class AIService {
     // Timeline đơn giản cho một môn
     private static class CourseTimeline {
         String courseName;
+        Long courseId;
         long startDay; // ngày bắt đầu (từ 1)
         long endDay;   // ngày kết thúc
 
-        CourseTimeline(String courseName, long startDay, long endDay) {
+        CourseTimeline(String courseName, Long courseId, long startDay, long endDay) {
             this.courseName = courseName;
+            this.courseId = courseId;
             this.startDay = startDay;
             this.endDay = endDay;
         }
@@ -320,63 +327,228 @@ public class AIService {
 
     /**
      * Xây dựng timeline dựa trên bảng course:
-     * - Lấy đúng 5 môn theo thứ tự:
-     *   Git & GitHub -> OOP -> SQL -> Web cơ bản -> Java Core & Spring Boot
-     * - Khoảng ngày cho từng môn dựa trên duration_days
+     * - Lấy MỌI môn trong DB, sort theo displayOrder rồi courseId
+     * - Dùng duration_days để tính khoảng ngày cho từng môn:
      *   Ví dụ: 3,4,4,5,6  =>  [1-3], [4-7], [8-11], [12-16], [17-22]
      */
     private List<CourseTimeline> buildCourseTimeline() {
-        // Thứ tự cố định
-        List<String> orderedNames = List.of(
-                "Git & GitHub",
-                "Lập trình hướng đối tượng (OOP)",
-                "Cơ sở dữ liệu (SQL)",
-                "Web cơ bản (HTML - CSS - JavaScript)",
-                "Java Core & Spring Boot"
+        List<Course> courses = courseRepository.findAll(
+                Sort.by(Sort.Direction.ASC, "displayOrder", "courseId")
         );
-
-        // Map tên môn -> duration_days
-        Map<String, Integer> durationMap = courseRepository.findAll()
-                .stream()
-                .filter(c -> c.getCourseName() != null)
-                .collect(Collectors.toMap(
-                        Course::getCourseName,
-                        c -> Optional.ofNullable(c.getDurationDays()).orElse(0),
-                        (a, b) -> a
-                ));
 
         List<CourseTimeline> result = new ArrayList<>();
         long currentStart = 1;
 
-        for (String name : orderedNames) {
-            Integer d = durationMap.get(name);
+        for (Course c : courses) {
+            Integer d = c.getDurationDays();
             if (d == null || d <= 0) {
-                // Nếu môn chưa có hoặc duration_days <= 0 -> bỏ qua
-                continue;
+                continue; // bỏ các môn chưa set số ngày học
             }
+
             long start = currentStart;
             long end = currentStart + d - 1;
-            result.add(new CourseTimeline(name, start, end));
+
+            result.add(new CourseTimeline(
+                    c.getCourseName(),
+                    c.getCourseId(),
+                    start,
+                    end
+            ));
+
             currentStart = end + 1;
         }
+
         return result;
     }
 
-    // Tìm tên môn tương ứng với số ngày thực tập
-    private String findCourseNameForDay(List<CourseTimeline> timeline, long trainingDays) {
-        if (timeline == null || timeline.isEmpty()) {
-            return "Không rõ môn hiện tại";
-        }
-        for (CourseTimeline c : timeline) {
-            if (trainingDays <= c.endDay) {
-                return c.courseName;
-            }
-        }
-        // Nếu vượt quá toàn bộ timeline thì coi là đang ở môn cuối
-        return timeline.get(timeline.size() - 1).courseName;
+    // Trạng thái tiến độ cho 1 TTS
+    private static class InternProgressStatus {
+        String currentCourseName;       // đang "đứng" ở môn nào trong chương trình
+        long trainingDays;             // số ngày thực tập (T2–T6)
+        long expectedCompletedCourses; // số môn LẼ RA phải hoàn thành
+        long actualCompletedCourses;   // số môn thực tế đã hoàn thành (tuần tự)
+
+        boolean isSlow()   { return actualCompletedCourses < expectedCompletedCourses; }
+        boolean isFast()   { return actualCompletedCourses > expectedCompletedCourses; }
+        boolean isOnTrack(){ return actualCompletedCourses == expectedCompletedCourses; }
     }
 
-    // Tính số ngày làm việc (T2–T6)
+    /**
+     * Đánh giá tiến độ 1 TTS:
+     * - Tính trainingDays (ưu tiên internship_days, nếu thiếu thì tính theo start_date → hôm nay)
+     * - Từ trainingDays → expectedCompletedCourses (bao nhiêu môn lẽ ra phải xong)
+     * - Lấy CourseResult → actualCompletedCourses (bao nhiêu môn đầu tiên đã đủ 3 điểm)
+     * - Không cho "nhảy cóc": gặp 1 môn chưa xong thì các môn sau không tính.
+     */
+    private InternProgressStatus evaluateInternProgress(Intern intern,
+                                                        List<CourseTimeline> timeline) {
+        if (intern == null || intern.getInternId() == null) return null;
+        if (timeline == null || timeline.isEmpty()) return null;
+
+        Long internId = intern.getInternId();
+
+        // 1. Tính số ngày thực tập
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = intern.getEndDate() != null ? intern.getEndDate() : today;
+
+        long trainingDays;
+        if (intern.getInternshipDays() != null && intern.getInternshipDays() > 0) {
+            trainingDays = intern.getInternshipDays();
+        } else {
+            trainingDays = calculateWorkingDays(intern.getStartDate(), endDate);
+        }
+
+        // 2. Lấy toàn bộ CourseResult của intern này
+        List<CourseResult> results = courseResultRepository.findByIntern_InternId(internId);
+
+        // Map courseId -> đã hoàn thành (đủ 3 điểm)
+        Set<Long> completedCourseIds = results.stream()
+                .filter(cr -> cr.getCourse() != null)
+                .filter(cr -> cr.getTheoryScore() != null
+                        && cr.getPracticeScore() != null
+                        && cr.getAttitudeScore() != null)
+                .map(cr -> cr.getCourse().getCourseId())
+                .collect(Collectors.toSet());
+
+        // 3. Số môn LẼ RA phải xong theo số ngày
+        long expectedCompleted = timeline.stream()
+                .filter(ct -> trainingDays >= ct.endDay)
+                .count();
+
+        // 4. Số môn thực tế đã hoàn thành nhưng bắt buộc tuần tự
+        long actualCompleted = 0;
+        for (CourseTimeline ct : timeline) {
+            if (completedCourseIds.contains(ct.courseId)) {
+                actualCompleted++;
+            } else {
+                // gặp 1 môn chưa xong thì coi như các môn sau cũng chưa được tính
+                break;
+            }
+        }
+
+        // 5. Xác định "môn hiện tại" để hiển thị
+        int currentIndex;
+        if (actualCompleted >= timeline.size()) {
+            currentIndex = timeline.size() - 1;
+        } else {
+            currentIndex = (int) actualCompleted;
+        }
+        if (currentIndex < 0) currentIndex = 0;
+
+        String currentCourseName = timeline.get(currentIndex).courseName;
+
+        InternProgressStatus status = new InternProgressStatus();
+        status.currentCourseName = currentCourseName;
+        status.trainingDays = trainingDays;
+        status.expectedCompletedCourses = expectedCompleted;
+        status.actualCompletedCourses = actualCompleted;
+
+        return status;
+    }
+
+    /**
+     * Thống kê các TTS CHẬM TIẾN ĐỘ theo từng kế hoạch:
+     * - Dựa trên duration_days từng môn (timeline) + điểm thành phần từng môn trong course_result
+     * - Không cho học nhảy cóc: phải hoàn thành môn A rồi mới tính đến B, C, ...
+     */
+    private String handleSlowProgressByPlans() {
+        List<CourseTimeline> timeline = buildCourseTimeline();
+        if (timeline.isEmpty()) {
+            return "Hiện chưa cấu hình 'Số ngày học' cho các môn nên bé chưa đánh giá được tiến độ thực tập sinh ạ.";
+        }
+
+        // dùng cho hiển thị
+        class InternRow {
+            String fullName;
+            String currentCourseName;
+            long trainingDays;
+            long expectedCompleted;
+            long actualCompleted;
+
+            InternRow(String fullName,
+                      String currentCourseName,
+                      long trainingDays,
+                      long expectedCompleted,
+                      long actualCompleted) {
+                this.fullName = fullName;
+                this.currentCourseName = currentCourseName;
+                this.trainingDays = trainingDays;
+                this.expectedCompleted = expectedCompleted;
+                this.actualCompleted = actualCompleted;
+            }
+        }
+
+        Map<RecruitmentPlan, List<InternRow>> map = new LinkedHashMap<>();
+
+        for (Intern intern : internRepository.findAll()) {
+            if (!"Đang thực tập".equalsIgnoreCase(intern.getInternStatus())) {
+                continue;
+            }
+
+            InternProgressStatus status = evaluateInternProgress(intern, timeline);
+            if (status == null || !status.isSlow()) {
+                continue; // chỉ quan tâm những bạn CHẬM
+            }
+
+            String fullName = intern.getCandidate() != null
+                    ? intern.getCandidate().getFullName()
+                    : ("Intern #" + intern.getInternId());
+
+            RecruitmentPlan plan = intern.getRecruitmentPlan();
+
+            map.computeIfAbsent(plan, k -> new ArrayList<>())
+                    .add(new InternRow(
+                            fullName,
+                            status.currentCourseName,
+                            status.trainingDays,
+                            status.expectedCompletedCourses,
+                            status.actualCompletedCourses
+                    ));
+        }
+
+        if (map.isEmpty()) {
+            return "Hiện tại không có thực tập sinh nào bị chậm tiến độ so với số ngày học của các môn trong chương trình ạ.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Chào anh/chị 👋\n\n");
+        sb.append("Dưới đây là các kế hoạch tuyển dụng đang có thực tập sinh CHẬM TIẾN ĐỘ ")
+                .append("(dựa trên số ngày học từng môn trong chương trình đào tạo):\n\n");
+
+        for (Map.Entry<RecruitmentPlan, List<InternRow>> entry : map.entrySet()) {
+            RecruitmentPlan plan = entry.getKey();
+            List<InternRow> rows = entry.getValue();
+
+            String planTitle;
+            if (plan == null) {
+                planTitle = "Không gắn với kế hoạch nào";
+            } else if (plan.getPlanName() != null) {
+                planTitle = plan.getPlanName();
+            } else {
+                planTitle = "Kế hoạch #" + plan.getRecruitmentPlanId();
+            }
+
+            sb.append("Kế hoạch: ").append(planTitle).append("\n");
+            sb.append(rows.size()).append(" bạn chậm tiến độ\n");
+            sb.append("STT\tTên TTS\tMôn hiện tại\tSố ngày TT\tMôn lẽ ra phải xong\tMôn đã xong\n");
+
+            int stt = 1;
+            for (InternRow r : rows) {
+                sb.append(stt++).append("\t")
+                        .append(r.fullName).append("\t")
+                        .append(r.currentCourseName).append("\t")
+                        .append(r.trainingDays).append("\t")
+                        .append(r.expectedCompleted).append("\t")
+                        .append(r.actualCompleted)
+                        .append("\n");
+            }
+            sb.append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    // ==================== TÍNH NGÀY LÀM VIỆC (T2-T6) ====================
     private long calculateWorkingDays(LocalDate start, LocalDate end) {
         if (start == null || end == null || end.isBefore(start)) return 0;
 
@@ -391,109 +563,5 @@ public class AIService {
             date = date.plusDays(1);
         }
         return days;
-    }
-
-    /**
-     * Thống kê các TTS CHẬM TIẾN ĐỘ theo từng kế hoạch:
-     * - Lấy mốc chuẩn = tổng duration_days của các môn trong timeline
-     * - Với từng intern:
-     *   + Lấy internship_days; nếu null thì tính lại theo start_date (ngày làm việc)
-     *   + Nếu internStatus = "Đang thực tập" và số ngày > mốc chuẩn
-     *     => coi là chậm tiến độ
-     *   + Xác định "môn hiện tại" theo timeline để hiển thị
-     */
-    private String handleSlowProgressByPlans() {
-        List<CourseTimeline> timeline = buildCourseTimeline();
-        if (timeline.isEmpty()) {
-            return "Hiện chưa cấu hình đủ 'Số ngày học' cho các môn nên bé chưa đánh giá được tiến độ thực tập sinh ạ.";
-        }
-
-        long totalStandardDays = timeline.get(timeline.size() - 1).endDay;
-
-        // class nhỏ để hiển thị
-        class InternProgress {
-            String fullName;
-            String currentCourse;
-            long trainingDays;
-
-            InternProgress(String fullName, String currentCourse, long trainingDays) {
-                this.fullName = fullName;
-                this.currentCourse = currentCourse;
-                this.trainingDays = trainingDays;
-            }
-        }
-
-        Map<RecruitmentPlan, List<InternProgress>> map = new LinkedHashMap<>();
-        LocalDate today = LocalDate.now();
-
-        for (Intern intern : internRepository.findAll()) {
-            if (!"Đang thực tập".equalsIgnoreCase(intern.getInternStatus())) {
-                continue;
-            }
-
-            long trainingDays;
-            if (intern.getInternshipDays() != null && intern.getInternshipDays() > 0) {
-                trainingDays = intern.getInternshipDays();
-            } else {
-                LocalDate startDate = intern.getStartDate();
-                LocalDate endDate = intern.getEndDate() != null ? intern.getEndDate() : today;
-                trainingDays = calculateWorkingDays(startDate, endDate);
-            }
-
-            // Chỉ xét những bạn bị CHẬM (số ngày > tổng chuẩn)
-            if (trainingDays <= totalStandardDays) {
-                continue;
-            }
-
-            String courseName = findCourseNameForDay(timeline, trainingDays);
-
-            String fullName = intern.getCandidate() != null
-                    ? intern.getCandidate().getFullName()
-                    : ("Intern #" + intern.getInternId());
-
-            RecruitmentPlan plan = intern.getRecruitmentPlan();
-            map.computeIfAbsent(plan, k -> new ArrayList<>())
-                    .add(new InternProgress(fullName, courseName, trainingDays));
-        }
-
-        if (map.isEmpty()) {
-            return "Hiện tại không có thực tập sinh nào bị chậm tiến độ so với tổng "
-                    + totalStandardDays + " ngày của 5 môn học ạ.";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("Chào anh/chị 👋\n\n");
-        sb.append("Dưới đây là các kế hoạch tuyển dụng đang có thực tập sinh CHẬM TIẾN ĐỘ ")
-                .append("(so với mốc ").append(totalStandardDays).append(" ngày cho 5 môn):\n\n");
-
-        for (Map.Entry<RecruitmentPlan, List<InternProgress>> entry : map.entrySet()) {
-            RecruitmentPlan plan = entry.getKey();
-            String planTitle;
-            if (plan == null) {
-                planTitle = "Không gắn với kế hoạch nào";
-            } else if (plan.getPlanName() != null) {
-                planTitle = plan.getPlanName();
-            } else {
-                planTitle = "Kế hoạch #" + plan.getRecruitmentPlanId();
-            }
-
-            List<InternProgress> list = entry.getValue();
-
-            sb.append("Kế hoạch\n");
-            sb.append(planTitle).append("\n");
-            sb.append(list.size()).append(" bạn chậm tiến độ\n");
-            sb.append("STT\tTên TTS\tMôn hiện tại\tSố ngày TT\n");
-
-            int stt = 1;
-            for (InternProgress ip : list) {
-                sb.append(stt++).append("\t")
-                        .append(ip.fullName).append("\t")
-                        .append(ip.currentCourse).append("\t")
-                        .append(ip.trainingDays).append("\n");
-            }
-            sb.append("\n");
-        }
-
-        return sb.toString();
     }
 }
