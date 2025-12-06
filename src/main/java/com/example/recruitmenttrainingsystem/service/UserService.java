@@ -69,7 +69,7 @@ public class UserService {
         verificationTokenRepository.delete(vt);
     }
 
-    // LOGIN - ĐÃ SỬA ĐỂ CHẶN TÀI KHOẢN KHÓA
+    // LOGIN - cho phép tài khoản đã khóa vẫn đăng nhập, để FE hiển thị modal khóa tài khoản
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException("Email không tồn tại"));
@@ -79,11 +79,10 @@ public class UserService {
             throw new CustomException("Email chưa xác thực");
         }
 
-        // 2. ✅ QUAN TRỌNG: Kiểm tra trạng thái hoạt động
-        // Nếu status = false (đã khóa) thì chặn ngay lập tức
-        if (!user.isStatus()) {
-            throw new CustomException("Tài khoản đã bị khóa. Vui lòng liên hệ Admin.");
-        }
+        // 2. KHÔNG chặn theo status nữa
+        // if (!user.isStatus()) {
+        //     throw new CustomException("Tài khoản đã bị khóa. Vui lòng liên hệ Admin.");
+        // }
 
         // 3. Kiểm tra mật khẩu
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
@@ -96,7 +95,15 @@ public class UserService {
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), role);
-        return new LoginResponse(token, role, user.getFullName(), user.getId());
+
+        // ✅ Trả thêm status để FE dùng cho AccountLockedModal
+        return new LoginResponse(
+                token,
+                role,
+                user.getFullName(),
+                user.getId(),
+                user.isStatus()
+        );
     }
 
     // Forgot pasword

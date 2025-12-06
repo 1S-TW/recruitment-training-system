@@ -17,6 +17,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -45,10 +48,14 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
-                    var c = new org.springframework.web.cors.CorsConfiguration();
-                    c.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
-                    c.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    c.setAllowedHeaders(java.util.List.of("*"));
+                    CorsConfiguration c = new CorsConfiguration();
+                    // ✅ CHO PHÉP CẢ localhost VÀ 127.0.0.1 (và có thể thêm origin khác nếu cần)
+                    c.setAllowedOriginPatterns(List.of(
+                            "http://localhost:5173",
+                            "http://127.0.0.1:5173"
+                    ));
+                    c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    c.setAllowedHeaders(List.of("*"));
                     c.setAllowCredentials(true);
                     return c;
                 }))
