@@ -26,10 +26,10 @@ public class SummaryResult {
     private BigDecimal finalScore;
 
     @Column(name = "internship_result", nullable = false, length = 10)
-    private String internshipResult = "NA"; // PASS, FAIL, NA
+    private String internshipResult = "N/A"; // PASS, FAIL, N/A
 
-    @Column(name = "team_evaluation", precision = 4, scale = 2)
-    private BigDecimal teamEvaluation;
+    @Column(name = "team_evaluation", nullable = false, length = 100)
+    private String teamEvaluation;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();

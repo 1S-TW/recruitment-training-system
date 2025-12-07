@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -20,58 +21,66 @@ public class TrainingController {
     private final TrainingService trainingService;
     private final InternRepository internRepository;
 
+    // GET: Lấy toàn bộ thực tập sinh (danh sách đào tạo)
     @GetMapping
-    public List<TrainingDto> getAll() {
-        return trainingService.getAll();
+    public ResponseEntity<List<TrainingDto>> getAll() {
+        return ResponseEntity.ok(trainingService.getAll());
     }
 
-    // ⭐ NEW: Lấy danh sách TTS theo kế hoạch tuyển dụng
-    // Ví dụ: GET /api/trainings/by-plan?planId=5
+    // GET: Lấy danh sách TTS theo kế hoạch tuyển dụng
+    // Ví dụ: /api/trainings/by-plan?planId=5
     @GetMapping("/by-plan")
     public ResponseEntity<List<TrainingDto>> getByPlan(@RequestParam("planId") Long planId) {
-        return ResponseEntity.ok(trainingService.getByPlan(planId));
-    }
-
-    @PutMapping("/{internId}/scores")
-    public ResponseEntity<TrainingDto> updateScores(@PathVariable Long internId,
-                                                    @RequestBody TrainingScoreDto dto) {
-        TrainingDto result = trainingService.updateScores(internId, dto);
+        List<TrainingDto> result = trainingService.getByPlan(planId);
         return ResponseEntity.ok(result);
     }
 
-    // === ENDPOINT DỪNG THỰC TẬP ===
+    // PUT: Cập nhật điểm số + kết quả thực tập (PASS/FAIL) + lý do khi <7
+    // Body: TrainingScoreDto (có thể chứa reason trong từng CourseScoreDto nếu <7)
+    @PutMapping("/{internId}/scores")
+    public ResponseEntity<TrainingDto> updateScores(
+            @PathVariable Long internId,
+            @Valid @RequestBody TrainingScoreDto dto) {
+
+        TrainingDto updated = trainingService.updateScores(internId, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    // PUT: Dừng thực tập (khi TTS bỏ học, không tiếp tục, v.v.)
     @PutMapping("/{internId}/stop")
     public ResponseEntity<TrainingDto> stopInternship(@PathVariable Long internId) {
-        System.out.println(">>> ĐÃ VÀO ENDPOINT /stop - internId = " + internId);
-
         Intern intern = internRepository.findById(internId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy thực tập sinh ID: " + internId));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thực tập sinh ID: " + internId));
 
-        // set trạng thái & ngày kết thúc thực tập
         intern.setInternStatus("Đã dừng thực tập");
-        intern.setEndDate(java.time.LocalDate.now()); // 👈 ngày dừng thực tập
-
+        intern.setEndDate(java.time.LocalDate.now());
         internRepository.save(intern);
 
-        // Sau khi dừng thực tập, kiểm tra xem kế hoạch/nhu cầu đã kết thúc chưa
+        // Kiểm tra trạng thái kế hoạch & nhu cầu sau khi dừng
         trainingService.checkRequestAndPlanStatusByInternId(internId);
 
         return ResponseEntity.ok(trainingService.toTrainingDto(intern));
     }
 
-    // === ĐẾM SỐ LƯỢNG TTS THAM GIA ĐÀO TẠO THEO KẾ HOẠCH ===
-    // Ví dụ: GET /api/trainings/count-by-plan?planId=5  -> 1, 2, 3, ...
+    // GET: Đếm tổng số TTS đang tham gia đào tạo theo kế hoạch
     @GetMapping("/count-by-plan")
     public ResponseEntity<Long> countInternsByPlan(@RequestParam("planId") Long planId) {
         long count = internRepository.countByRecruitmentPlan_RecruitmentPlanId(planId);
         return ResponseEntity.ok(count);
     }
 
-    // === ĐẾM SỐ LƯỢNG TTS ĐÃ BÀN GIAO (PASS & ĐÃ HOÀN THÀNH) THEO KẾ HOẠCH ===
-    // Ví dụ: GET /api/trainings/delivered-count-by-plan?planId=5  -> 0, 1, 2, ...
+    // GET: Đếm số TTS đã PASS & bàn giao thành công theo kế hoạch
     @GetMapping("/delivered-count-by-plan")
     public ResponseEntity<Long> countDeliveredByPlan(@RequestParam("planId") Long planId) {
         long count = trainingService.countInternsDeliveredByPlan(planId);
         return ResponseEntity.ok(count);
+    }
+
+    // NEW: Lấy chi tiết 1 thực tập sinh (dùng để xem form chấm điểm chi tiết)
+    @GetMapping("/{internId}")
+    public ResponseEntity<TrainingDto> getById(@PathVariable Long internId) {
+        Intern intern = internRepository.findById(internId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thực tập sinh ID: " + internId));
+        return ResponseEntity.ok(trainingService.toTrainingDto(intern));
     }
 }
