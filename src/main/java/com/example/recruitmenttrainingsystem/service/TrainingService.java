@@ -13,8 +13,7 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.Optional; // ĐÃ THÊM DÒNG NÀY!
 
 @Service
 @RequiredArgsConstructor
@@ -51,6 +50,7 @@ public class TrainingService {
         Intern intern = internRepository.findById(internId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thực tập sinh ID: " + internId));
 
+        // Cập nhật điểm từng môn (giữ nguyên logic 3 lần chấm)
         if (dto.getScores() != null && !dto.getScores().isEmpty()) {
             for (CourseScoreDto s : dto.getScores()) {
                 updateSingleCourseScore(intern, s);
@@ -58,18 +58,13 @@ public class TrainingService {
         }
 
         SummaryResult summary = summaryResultRepository.findByIntern_InternId(internId)
-                .orElseGet(() -> SummaryResult.builder().intern(intern).internshipResult("N/A").build());
+                .orElseGet(() -> SummaryResult.builder()
+                        .intern(intern)
+                        .internshipResult("Chưa kết luận")
+                        .build());
 
         summary.setFinalScore(dto.getSummaryResult());
         summary.setTeamEvaluation(dto.getTeamReview());
-
-        String result = dto.getInternshipResult();
-        String finalResult = (result == null || result.trim().isEmpty()) ? "N/A" : result.trim().toUpperCase();
-        if (!Set.of("Đạt", "Không đạt", "N/A").contains(finalResult)) {
-            throw new IllegalArgumentException("internshipResult chỉ được là Đạt, Không đạt hoặc N/A");
-        }
-        summary.setInternshipResult(finalResult);
-        summaryResultRepository.save(summary);
 
         String newStatus = "Đang thực tập";
         LocalDate endDate = null;
@@ -77,26 +72,32 @@ public class TrainingService {
         if ("Đã dừng thực tập".equals(intern.getInternStatus())) {
             newStatus = "Đã dừng thực tập";
         } else {
-            // KIỂM TRA ĐÃ CHẤM ĐỦ 3 ĐIỂM TẤT CẢ MÔN CHƯA
             boolean allCompleted = courseResultRepository.findByIntern_InternId(internId).stream()
                     .allMatch(cr -> cr.getTheoryScore() != null &&
                             cr.getPracticeScore() != null &&
                             cr.getAttitudeScore() != null);
 
             if (allCompleted) {
-                // ĐÃ HOÀN THÀNH TẤT CẢ MÔN → LƯU NGÀY KẾT THÚC + ĐÃ HOÀN THÀNH
                 newStatus = "Đã hoàn thành";
-                endDate = LocalDate.now(); // NGÀY HÔM NAY
+                endDate = LocalDate.now();
                 intern.setEndDate(endDate);
 
-                // DÙ MÔN CUỐI <7 VÀ ĐÃ HẾT LƯỢT CHẤM → VẪN HOÀN THÀNH
-                if ("Đạt".equals(finalResult) || "Không đạt".equals(finalResult)) {
-                    summary.setInternshipResult(finalResult);
-                    summaryResultRepository.save(summary);
-                }
+                // SỬA LỖI: Chuyển BigDecimal → Double
+                BigDecimal avgBigDecimal = dto.getSummaryResult();
+                Double avg = (avgBigDecimal != null) ? avgBigDecimal.doubleValue() : null;
+
+                boolean hasSubjectBelow7 = courseResultRepository.findByIntern_InternId(internId).stream()
+                        .anyMatch(cr -> cr.getTotalScore() != null &&
+                                cr.getTotalScore().compareTo(BigDecimal.valueOf(7)) < 0);
+
+                String autoResult = (avg != null && avg >= 7 && !hasSubjectBelow7) ? "Đạt" : "Không đạt";
+                summary.setInternshipResult(autoResult);
+            } else {
+                summary.setInternshipResult("Chưa kết luận");
             }
         }
 
+        summaryResultRepository.save(summary);
         intern.setInternStatus(newStatus);
         internRepository.save(intern);
 
@@ -105,7 +106,6 @@ public class TrainingService {
         return toTrainingDto(intern);
     }
 
-    // SỬA CHÍNH: Không ném lỗi khi cố chấm lại môn đã đạt ≥ 7 → FE sẽ disable ô
     private void updateSingleCourseScore(Intern intern, CourseScoreDto s) {
         Course course = courseRepository.findByCourseName(s.getCourseName())
                 .orElseThrow(() -> new IllegalArgumentException("Môn học không tồn tại: " + s.getCourseName()));
@@ -122,24 +122,22 @@ public class TrainingService {
 
         int currentAttempts = courseScoreHistoryRepository.countByCourseResult(cr);
 
-        // Nếu đã chấm đủ 3 lần → không cho chấm thêm
         if (currentAttempts >= 3) {
             throw new IllegalArgumentException("Môn " + s.getCourseName() + " đã chấm đủ 3 lần, không thể chấm thêm!");
         }
 
-        // Nếu đã có điểm lần trước và lần trước >= 7 → BỎ QUA (không làm gì cả)
         if (currentAttempts > 0) {
-            CourseScoreHistory last = courseScoreHistoryRepository
-                    .findByCourseResult_CourseResultIdOrderByAttemptNumberAsc(cr.getCourseResultId())
-                    .get(currentAttempts - 1);
-
-            BigDecimal lastTotal = calculateTotalScore(last.getTheoryScore(), last.getPracticeScore(), last.getAttitudeScore());
-            if (lastTotal != null && lastTotal.compareTo(BigDecimal.valueOf(7)) >= 0) {
-                return; // Không ném lỗi → chỉ bỏ qua môn này
+            List<CourseScoreHistory> historyList = courseScoreHistoryRepository
+                    .findByCourseResult_CourseResultIdOrderByAttemptNumberAsc(cr.getCourseResultId());
+            if (!historyList.isEmpty()) {
+                CourseScoreHistory last = historyList.get(historyList.size() - 1);
+                BigDecimal lastTotal = calculateTotalScore(last.getTheoryScore(), last.getPracticeScore(), last.getAttitudeScore());
+                if (lastTotal != null && lastTotal.compareTo(BigDecimal.valueOf(7)) >= 0) {
+                    return;
+                }
             }
         }
 
-        // Kiểm tra đủ 3 điểm
         if (s.getTheoryScore() == null || s.getPracticeScore() == null || s.getAttitudeScore() == null) {
             throw new IllegalArgumentException("Phải nhập đủ 3 loại điểm cho môn " + s.getCourseName());
         }
@@ -149,7 +147,6 @@ public class TrainingService {
                 .add(s.getAttitudeScore())
                 .divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
 
-        // Nếu điểm < 7 → bắt buộc có lý do
         if (newTotal.compareTo(BigDecimal.valueOf(7)) < 0) {
             if (s.getReason() == null || s.getReason().trim().isEmpty()) {
                 throw new IllegalArgumentException(
@@ -157,7 +154,6 @@ public class TrainingService {
             }
         }
 
-        // Lưu lịch sử và cập nhật điểm
         CourseScoreHistory history = CourseScoreHistory.builder()
                 .courseResult(cr)
                 .attemptNumber(currentAttempts + 1)
@@ -180,7 +176,6 @@ public class TrainingService {
         return t.add(p).add(a).divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
     }
 
-    // toTrainingDto giữ nguyên (đã hiển thị đúng)
     public TrainingDto toTrainingDto(Intern intern) {
         List<Course> allCourses = courseRepository.findAll();
 
@@ -227,6 +222,7 @@ public class TrainingService {
                 .toList();
 
         SummaryResult summary = summaryResultRepository.findByIntern_InternId(intern.getInternId()).orElse(null);
+
         LocalDate today = LocalDate.now();
         LocalDate endDate = intern.getEndDate() != null ? intern.getEndDate() : today;
         long trainingDays = calculateWorkingDays(intern.getStartDate(), endDate);
@@ -245,7 +241,9 @@ public class TrainingService {
                 .scores(scores)
                 .summaryResult(summary != null ? summary.getFinalScore() : null)
                 .teamReview(summary != null ? summary.getTeamEvaluation() : null)
-                .internshipResult(summary != null && summary.getInternshipResult() != null ? summary.getInternshipResult() : "N/A")
+                .internshipResult(summary != null && summary.getInternshipResult() != null
+                        ? summary.getInternshipResult()
+                        : "Chưa kết luận")
                 .internStatus(intern.getInternStatus())
                 .build();
     }
@@ -255,7 +253,6 @@ public class TrainingService {
                 .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndIntern_InternStatusAndInternshipResult(
                         planId, "Đã hoàn thành", "Đạt");
     }
-
 
     @Transactional
     public void checkRequestAndPlanStatusByInternId(Long internId) {
@@ -277,20 +274,16 @@ public class TrainingService {
         long deliveredCount = countInternsDeliveredByPlan(planId);
 
         if (deliveredCount >= outputRequired) {
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(plan.getStatus()))) {
-                plan.setStatus("COMPLETED");
-                recruitmentPlanRepository.save(plan);
-            }
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(request.getStatus()))) {
-                request.setStatus("COMPLETED");
-                hrRequestRepository.save(request);
-            }
+            plan.setStatus("COMPLETED");
+            recruitmentPlanRepository.save(plan);
+            request.setStatus("COMPLETED");
+            hrRequestRepository.save(request);
             return;
         }
 
         long totalInterns = internRepository.countByRecruitmentPlan_RecruitmentPlanId(planId);
         long evaluatedInterns = summaryResultRepository
-                .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndInternshipResultIn(planId, List.of("PASS", "FAIL"));
+                .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndInternshipResultIn(planId, List.of("Đạt", "Không đạt"));
 
         if (totalInterns == 0 || evaluatedInterns < totalInterns) return;
 
@@ -302,11 +295,8 @@ public class TrainingService {
         request.setStatus("COMPLETED");
         request.setRejectReason("Lý do: " + reason);
         hrRequestRepository.save(request);
-
-        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(plan.getStatus()))) {
-            plan.setStatus("COMPLETED");
-            recruitmentPlanRepository.save(plan);
-        }
+        plan.setStatus("COMPLETED");
+        recruitmentPlanRepository.save(plan);
     }
 
     private long calculateWorkingDays(LocalDate start, LocalDate end) {
