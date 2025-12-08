@@ -49,17 +49,8 @@ public class TrainingController {
     // PUT: Dừng thực tập (khi TTS bỏ học, không tiếp tục, v.v.)
     @PutMapping("/{internId}/stop")
     public ResponseEntity<TrainingDto> stopInternship(@PathVariable Long internId) {
-        Intern intern = internRepository.findById(internId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thực tập sinh ID: " + internId));
-
-        intern.setInternStatus("Đã dừng thực tập");
-        intern.setEndDate(java.time.LocalDate.now());
-        internRepository.save(intern);
-
-        // Kiểm tra trạng thái kế hoạch & nhu cầu sau khi dừng
-        trainingService.checkRequestAndPlanStatusByInternId(internId);
-
-        return ResponseEntity.ok(trainingService.toTrainingDto(intern));
+        TrainingDto result = trainingService.stopInternship(internId);
+        return ResponseEntity.ok(result);
     }
 
     // GET: Đếm tổng số TTS đang tham gia đào tạo theo kế hoạch

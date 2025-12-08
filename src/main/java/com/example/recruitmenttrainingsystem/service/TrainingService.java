@@ -51,50 +51,49 @@ public class TrainingService {
         Intern intern = internRepository.findById(internId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thực tập sinh ID: " + internId));
 
+        // Xử lý từng môn được gửi lên
         if (dto.getScores() != null && !dto.getScores().isEmpty()) {
             for (CourseScoreDto s : dto.getScores()) {
                 updateSingleCourseScore(intern, s);
             }
         }
 
+        // Lấy summary (tạo mới nếu chưa có)
         SummaryResult summary = summaryResultRepository.findByIntern_InternId(internId)
-                .orElseGet(() -> SummaryResult.builder().intern(intern).internshipResult("N/A").build());
+                .orElseGet(() -> SummaryResult.builder()
+                        .intern(intern)
+                        .internshipResult("N/A")
+                        .build());
 
-        summary.setFinalScore(dto.getSummaryResult());
+        // Cập nhật đánh giá team
         summary.setTeamEvaluation(dto.getTeamReview());
-
-        String result = dto.getInternshipResult();
-        String finalResult = (result == null || result.trim().isEmpty()) ? "N/A" : result.trim().toUpperCase();
-        if (!Set.of("Đạt", "Không đạt", "N/A").contains(finalResult)) {
-            throw new IllegalArgumentException("internshipResult chỉ được là Đạt, Không đạt hoặc N/A");
-        }
-        summary.setInternshipResult(finalResult);
         summaryResultRepository.save(summary);
+
+        // KIỂM TRA ĐIỂM CHÍNH THỨC CỦA TẤT CẢ MÔN
+        boolean allCoursesHaveFinalScore = isAllCoursesHaveFinalScore(internId);
 
         String newStatus = "Đang thực tập";
         LocalDate endDate = null;
 
         if ("Đã dừng thực tập".equals(intern.getInternStatus())) {
             newStatus = "Đã dừng thực tập";
+        } else if (allCoursesHaveFinalScore) {
+            // TẤT CẢ MÔN ĐÃ CÓ ĐIỂM CHÍNH THỨC → HOÀN THÀNH
+            newStatus = "Đã hoàn thành";
+            endDate = LocalDate.now();
+            intern.setEndDate(endDate);
+
+            BigDecimal finalScore = calculateOverallScore(internId);
+            boolean hasAnyFail = hasAnyCourseFailed(internId);
+
+            summary.setFinalScore(finalScore);
+            summary.setInternshipResult(hasAnyFail ? "Không đạt" : "Đạt");
+            summaryResultRepository.save(summary);
         } else {
-            // KIỂM TRA ĐÃ CHẤM ĐỦ 3 ĐIỂM TẤT CẢ MÔN CHƯA
-            boolean allCompleted = courseResultRepository.findByIntern_InternId(internId).stream()
-                    .allMatch(cr -> cr.getTheoryScore() != null &&
-                            cr.getPracticeScore() != null &&
-                            cr.getAttitudeScore() != null);
-
-            if (allCompleted) {
-                // ĐÃ HOÀN THÀNH TẤT CẢ MÔN → LƯU NGÀY KẾT THÚC + ĐÃ HOÀN THÀNH
-                newStatus = "Đã hoàn thành";
-                endDate = LocalDate.now(); // NGÀY HÔM NAY
-                intern.setEndDate(endDate);
-
-                // DÙ MÔN CUỐI <7 VÀ ĐÃ HẾT LƯỢT CHẤM → VẪN HOÀN THÀNH
-                if ("Đạt".equals(finalResult) || "Không đạt".equals(finalResult)) {
-                    summary.setInternshipResult(finalResult);
-                    summaryResultRepository.save(summary);
-                }
-            }
+            // Chưa đủ → reset về N/A
+            summary.setFinalScore(null);
+            summary.setInternshipResult("N/A");
+            summaryResultRepository.save(summary);
         }
 
         intern.setInternStatus(newStatus);
@@ -105,7 +104,57 @@ public class TrainingService {
         return toTrainingDto(intern);
     }
 
-    // SỬA CHÍNH: Không ném lỗi khi cố chấm lại môn đã đạt ≥ 7 → FE sẽ disable ô
+    // ĐIỂM CHÍNH THỨC LÀ: lần cuối cùng và (≥7 hoặc đã chấm đủ 3 lần)
+    private boolean isAllCoursesHaveFinalScore(Long internId) {
+        List<Course> allCourses = courseRepository.findAll();
+        if (allCourses.isEmpty()) return false;
+
+        for (Course course : allCourses) {
+            CourseResult cr = courseResultRepository
+                    .findByIntern_InternIdAndCourse_CourseName(internId, course.getCourseName())
+                    .orElse(null);
+
+            if (cr == null || cr.getTotalScore() == null) return false;
+
+            int attempts = courseScoreHistoryRepository.countByCourseResult(cr);
+            BigDecimal score = cr.getTotalScore();
+
+            // Nếu ≥7 → có điểm chính thức
+            // Nếu <7 nhưng đã chấm đủ 3 lần → vẫn có điểm chính thức
+            if (score.compareTo(BigDecimal.valueOf(7)) >= 0 || attempts >= 3) {
+                continue;
+            }
+            return false; // còn môn chưa có điểm chính thức
+        }
+        return true;
+    }
+
+    private BigDecimal calculateOverallScore(Long internId) {
+        List<CourseResult> results = courseResultRepository.findByIntern_InternId(internId)
+                .stream()
+                .filter(cr -> cr.getTotalScore() != null)
+                .toList();
+
+        if (results.isEmpty()) return null;
+
+        BigDecimal sum = results.stream()
+                .map(CourseResult::getTotalScore)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return sum.divide(BigDecimal.valueOf(results.size()), 2, RoundingMode.HALF_UP);
+    }
+
+    private boolean hasAnyCourseFailed(Long internId) {
+        return courseResultRepository.findByIntern_InternId(internId).stream()
+                .anyMatch(cr -> {
+                    int attempts = courseScoreHistoryRepository.countByCourseResult(cr);
+                    return cr.getTotalScore() != null
+                            && cr.getTotalScore().compareTo(BigDecimal.valueOf(7)) < 0
+                            && attempts >= 3; // chỉ tính là fail nếu đã chấm đủ 3 lần
+                });
+    }
+
+    // Cập nhật điểm 1 môn – sửa lại đúng logic 3 lần chấm
     private void updateSingleCourseScore(Intern intern, CourseScoreDto s) {
         Course course = courseRepository.findByCourseName(s.getCourseName())
                 .orElseThrow(() -> new IllegalArgumentException("Môn học không tồn tại: " + s.getCourseName()));
@@ -122,24 +171,23 @@ public class TrainingService {
 
         int currentAttempts = courseScoreHistoryRepository.countByCourseResult(cr);
 
-        // Nếu đã chấm đủ 3 lần → không cho chấm thêm
+        // 1. Đã chấm đủ 3 lần → không cho chấm thêm
         if (currentAttempts >= 3) {
-            throw new IllegalArgumentException("Môn " + s.getCourseName() + " đã chấm đủ 3 lần, không thể chấm thêm!");
+            throw new IllegalArgumentException("Môn " + s.getCourseName() + " đã chấm đủ 3 lần!");
         }
 
-        // Nếu đã có điểm lần trước và lần trước >= 7 → BỎ QUA (không làm gì cả)
+        // 2. Đã từng đạt ≥7 → KHÓA LUÔN, không cho chấm lại
         if (currentAttempts > 0) {
             CourseScoreHistory last = courseScoreHistoryRepository
-                    .findByCourseResult_CourseResultIdOrderByAttemptNumberAsc(cr.getCourseResultId())
-                    .get(currentAttempts - 1);
+                    .findTopByCourseResultOrderByAttemptNumberDesc(cr)
+                    .orElseThrow();
 
-            BigDecimal lastTotal = calculateTotalScore(last.getTheoryScore(), last.getPracticeScore(), last.getAttitudeScore());
-            if (lastTotal != null && lastTotal.compareTo(BigDecimal.valueOf(7)) >= 0) {
-                return; // Không ném lỗi → chỉ bỏ qua môn này
+            if (last.getTotalScore() != null && last.getTotalScore().compareTo(BigDecimal.valueOf(7)) >= 0) {
+                throw new IllegalArgumentException("Môn " + s.getCourseName() + " đã đạt từ lần trước, không thể chấm lại!");
             }
         }
 
-        // Kiểm tra đủ 3 điểm
+        // 3. Kiểm tra đủ 3 điểm
         if (s.getTheoryScore() == null || s.getPracticeScore() == null || s.getAttitudeScore() == null) {
             throw new IllegalArgumentException("Phải nhập đủ 3 loại điểm cho môn " + s.getCourseName());
         }
@@ -149,25 +197,26 @@ public class TrainingService {
                 .add(s.getAttitudeScore())
                 .divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
 
-        // Nếu điểm < 7 → bắt buộc có lý do
+        // 4. Điểm <7 → bắt buộc lý do
         if (newTotal.compareTo(BigDecimal.valueOf(7)) < 0) {
             if (s.getReason() == null || s.getReason().trim().isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Điểm môn " + s.getCourseName() + " = " + newTotal + " < 7 → Bắt buộc phải nhập lý do!");
+                throw new IllegalArgumentException("Điểm môn " + s.getCourseName() + " = " + newTotal + " < 7 → Bắt buộc nhập lý do!");
             }
         }
 
-        // Lưu lịch sử và cập nhật điểm
+        // 5. Lưu lịch sử + cập nhật điểm hiện tại
         CourseScoreHistory history = CourseScoreHistory.builder()
                 .courseResult(cr)
                 .attemptNumber(currentAttempts + 1)
                 .theoryScore(s.getTheoryScore())
                 .practiceScore(s.getPracticeScore())
                 .attitudeScore(s.getAttitudeScore())
-                .reason(newTotal.compareTo(BigDecimal.valueOf(7)) < 0 ? s.getReason() : null)
+                .totalScore(newTotal)
+                .reason(newTotal.compareTo(BigDecimal.valueOf(7)) < 0 ? s.getReason().trim() : null)
                 .build();
         courseScoreHistoryRepository.save(history);
 
+        // Cập nhật điểm hiện tại của CourseResult
         cr.setTheoryScore(s.getTheoryScore());
         cr.setPracticeScore(s.getPracticeScore());
         cr.setAttitudeScore(s.getAttitudeScore());
@@ -178,6 +227,21 @@ public class TrainingService {
     private BigDecimal calculateTotalScore(BigDecimal t, BigDecimal p, BigDecimal a) {
         if (t == null || p == null || a == null) return null;
         return t.add(p).add(a).divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
+    }
+
+    // Method dừng thực tập
+    @Transactional
+    public TrainingDto stopInternship(Long internId) {
+        Intern intern = internRepository.findById(internId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thực tập sinh ID: " + internId));
+
+        intern.setInternStatus("Đã dừng thực tập");
+        intern.setEndDate(LocalDate.now());
+        internRepository.save(intern);
+
+        checkRequestAndPlanStatusByInternId(internId);
+
+        return toTrainingDto(intern);
     }
 
     // toTrainingDto giữ nguyên (đã hiển thị đúng)
