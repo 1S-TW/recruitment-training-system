@@ -1,4 +1,3 @@
-// src/main/java/com/example/recruitmenttrainingsystem/repository/InternRepository.java
 package com.example.recruitmenttrainingsystem.repository;
 
 import com.example.recruitmenttrainingsystem.entity.Intern;
@@ -24,12 +23,21 @@ public interface InternRepository extends JpaRepository<Intern, Long> {
             String internStatus
     );
 
-    // ⭐ NEW – Đếm theo status PASS/FAIL (dùng cột internStatus)
-    long countByInternStatus(String internStatus);
+    // ⭐ ĐÚNG — InternStatus (không liên quan PASS/FAIL)
+    long countByInternStatusIgnoreCase(String internStatus);
 
-    long countInternByEndDate(LocalDate endDate);
-    long countInternByStartDate(LocalDate startDate);
+    // ⭐ DÙNG LocalDate — CHUẨN
+    long countByStartDateBetween(LocalDate start, LocalDate end);
 
-    // ⭐ NEW – Lấy danh sách intern theo kế hoạch (để AI phân tích tiến độ theo từng kế hoạch)
+    long countByEndDateBetween(LocalDate start, LocalDate end);
+
+    // ⭐ Nghỉ thực tập (Đã dừng thực tập)
+    long countByInternStatusIgnoreCaseAndEndDateBetween(
+            String internStatus,
+            LocalDate start,
+            LocalDate end
+    );
+
+    // Lấy danh sách intern theo kế hoạch
     List<Intern> findByRecruitmentPlan_RecruitmentPlanId(Long recruitmentPlanId);
 }

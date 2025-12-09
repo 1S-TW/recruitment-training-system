@@ -13,8 +13,7 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.Optional; // ĐÃ THÊM DÒNG NÀY!
 
 @Service
 @RequiredArgsConstructor
@@ -96,6 +95,7 @@ public class TrainingService {
             summaryResultRepository.save(summary);
         }
 
+        summaryResultRepository.save(summary);
         intern.setInternStatus(newStatus);
         internRepository.save(intern);
 
@@ -291,6 +291,7 @@ public class TrainingService {
                 .toList();
 
         SummaryResult summary = summaryResultRepository.findByIntern_InternId(intern.getInternId()).orElse(null);
+
         LocalDate today = LocalDate.now();
         LocalDate endDate = intern.getEndDate() != null ? intern.getEndDate() : today;
         long trainingDays = calculateWorkingDays(intern.getStartDate(), endDate);
@@ -309,7 +310,9 @@ public class TrainingService {
                 .scores(scores)
                 .summaryResult(summary != null ? summary.getFinalScore() : null)
                 .teamReview(summary != null ? summary.getTeamEvaluation() : null)
-                .internshipResult(summary != null && summary.getInternshipResult() != null ? summary.getInternshipResult() : "N/A")
+                .internshipResult(summary != null && summary.getInternshipResult() != null
+                        ? summary.getInternshipResult()
+                        : "Chưa kết luận")
                 .internStatus(intern.getInternStatus())
                 .build();
     }
@@ -319,7 +322,6 @@ public class TrainingService {
                 .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndIntern_InternStatusAndInternshipResult(
                         planId, "Đã hoàn thành", "Đạt");
     }
-
 
     @Transactional
     public void checkRequestAndPlanStatusByInternId(Long internId) {
@@ -341,20 +343,16 @@ public class TrainingService {
         long deliveredCount = countInternsDeliveredByPlan(planId);
 
         if (deliveredCount >= outputRequired) {
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(plan.getStatus()))) {
-                plan.setStatus("COMPLETED");
-                recruitmentPlanRepository.save(plan);
-            }
-            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(request.getStatus()))) {
-                request.setStatus("COMPLETED");
-                hrRequestRepository.save(request);
-            }
+            plan.setStatus("COMPLETED");
+            recruitmentPlanRepository.save(plan);
+            request.setStatus("COMPLETED");
+            hrRequestRepository.save(request);
             return;
         }
 
         long totalInterns = internRepository.countByRecruitmentPlan_RecruitmentPlanId(planId);
         long evaluatedInterns = summaryResultRepository
-                .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndInternshipResultIn(planId, List.of("PASS", "FAIL"));
+                .countByIntern_RecruitmentPlan_RecruitmentPlanIdAndInternshipResultIn(planId, List.of("Đạt", "Không đạt"));
 
         if (totalInterns == 0 || evaluatedInterns < totalInterns) return;
 
@@ -366,11 +364,8 @@ public class TrainingService {
         request.setStatus("COMPLETED");
         request.setRejectReason("Lý do: " + reason);
         hrRequestRepository.save(request);
-
-        if (!"COMPLETED".equalsIgnoreCase(String.valueOf(plan.getStatus()))) {
-            plan.setStatus("COMPLETED");
-            recruitmentPlanRepository.save(plan);
-        }
+        plan.setStatus("COMPLETED");
+        recruitmentPlanRepository.save(plan);
     }
 
     private long calculateWorkingDays(LocalDate start, LocalDate end) {
