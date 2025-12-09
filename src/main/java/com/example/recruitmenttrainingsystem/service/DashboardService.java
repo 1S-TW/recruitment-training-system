@@ -47,7 +47,11 @@ public class DashboardService {
         // 4. Pass/Fail Rate
         double passFailRate = (totalGraduate + totalFail == 0)
                 ? 0
-                : (double) totalGraduate / (totalGraduate + totalFail);
+                : ((double) totalGraduate / (totalGraduate + totalFail)) * 100;
+
+        // Format thành chuỗi với 2 chữ số thập phân và ký hiệu %
+        String passFailRateStr = String.format("%.2f%%", passFailRate);
+
 
         // 5. Nghỉ thực tập
         long totalQuit = all
@@ -64,7 +68,7 @@ public class DashboardService {
                 .totalEnroll(totalEnroll)
                 .totalGraduate(totalGraduate)
                 .totalFail(totalFail)
-                .passFailRate(passFailRate)
+                .passFailRateStr(passFailRateStr)
                 .totalQuit(totalQuit)
                 .averageFinalScore(avgScore)
                 .build();
