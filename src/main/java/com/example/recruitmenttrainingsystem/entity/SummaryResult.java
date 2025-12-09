@@ -28,7 +28,7 @@ public class SummaryResult {
     @Column(name = "internship_result", nullable = false, length = 10)
     private String internshipResult = "N/A"; // PASS, FAIL, N/A
 
-    @Column(name = "team_evaluation", nullable = false, length = 100)
+    @Column(name = "team_evaluation", length = 100)
     private String teamEvaluation;
 
     @Column(name = "updated_at", nullable = false)
