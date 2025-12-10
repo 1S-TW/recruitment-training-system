@@ -106,12 +106,20 @@ public class NotificationService {
                 "RECRUITMENT_PLAN", plan.getRecruitmentPlanId());
     }
 
-    // ====== 6. QLDT từ chối kế hoạch (QLDT -> HR) ======
+    // ====== 6. QLDT từ chối kế hoạch (QLDT -> HR + LEAD) ======
     public void notify_PlanRejected(RecruitmentPlan plan, User qldt) {
         String title = "Kế hoạch tuyển dụng bị từ chối";
         String content = "QLĐT " + qldt.getFullName()
                 + " đã từ chối kế hoạch: \"" + plan.getPlanName() + "\".";
+
+        // Gửi cho HR
         notifyRole("HR", qldt,
+                "PLAN_REJECTED",
+                title, content,
+                "RECRUITMENT_PLAN", plan.getRecruitmentPlanId());
+
+        // ✅ Gửi thêm cho LEAD (bạn)
+        notifyRole("LEAD", qldt,
                 "PLAN_REJECTED",
                 title, content,
                 "RECRUITMENT_PLAN", plan.getRecruitmentPlanId());
