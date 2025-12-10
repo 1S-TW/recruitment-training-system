@@ -5,6 +5,7 @@ import com.example.recruitmenttrainingsystem.dto.*;
 import com.example.recruitmenttrainingsystem.entity.*;
 import com.example.recruitmenttrainingsystem.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +32,8 @@ public class TrainingService {
 
     // ==================== GET ALL ====================
     public List<TrainingDto> getAll() {
-        return internRepository.findAll().stream()
+        // 👇 SỬA DÒNG NÀY: Thêm Sort.by(Sort.Direction.DESC, "internId")
+        return internRepository.findAll(Sort.by(Sort.Direction.DESC, "internId")).stream()
                 .map(this::toTrainingDto)
                 .toList();
     }

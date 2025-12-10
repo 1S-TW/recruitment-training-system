@@ -179,7 +179,7 @@ public class CandidateService {
                     ? ""
                     : dto.getCandidateStatus().trim().toLowerCase(Locale.ROOT);
 
-            boolean isAcceptedNow = statusNow.contains("nhận việc") || statusNow.contains("xác nhận");
+            boolean isAcceptedNow = statusNow.contains(" Đã nhận việc") || statusNow.contains("xác nhận");
 
             if (isAcceptedNow) {
                 throw new CustomException("Lỗi logic: Không thể đặt trạng thái 'Đã nhận việc' nếu kết quả cuối cùng là 'Không đạt'.");
