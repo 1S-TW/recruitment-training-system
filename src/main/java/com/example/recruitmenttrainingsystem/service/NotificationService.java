@@ -91,37 +91,51 @@ public class NotificationService {
 
     // ====== 5. QLDT duyệt kế hoạch (QLDT -> HR + LEAD) ======
     public void notify_PlanConfirmed(RecruitmentPlan plan, User qldt) {
-        String title = "Kế hoạch tuyển dụng đã được duyệt";
-        String content = "QLĐT " + qldt.getFullName()
-                + " đã duyệt kế hoạch: \"" + plan.getPlanName() + "\".";
+        Long planId = plan.getRecruitmentPlanId();
+
+        // 🔹 Thông báo cho HR – nhấn mạnh "kế hoạch bạn phụ trách"
+        String titleHr = "Kế hoạch tuyển dụng bạn phụ trách đã được duyệt";
+        String contentHr = "QLĐT " + qldt.getFullName()
+                + " đã duyệt kế hoạch bạn phụ trách: \"" + plan.getPlanName() + "\".";
 
         notifyRole("HR", qldt,
                 "PLAN_CONFIRMED",
-                title, content,
-                "RECRUITMENT_PLAN", plan.getRecruitmentPlanId());
+                titleHr, contentHr,
+                "RECRUITMENT_PLAN", planId);
+
+        // 🔹 Thông báo cho LEAD – giữ nguyên format bạn đã dùng
+        String titleLead = "Kế hoạch tuyển dụng đã được duyệt";
+        String contentLead = "QLĐT " + qldt.getFullName()
+                + " đã duyệt kế hoạch: \"" + plan.getPlanName() + "\".";
 
         notifyRole("LEAD", qldt,
                 "PLAN_CONFIRMED",
-                title, content,
-                "RECRUITMENT_PLAN", plan.getRecruitmentPlanId());
+                titleLead, contentLead,
+                "RECRUITMENT_PLAN", planId);
     }
 
     // ====== 6. QLDT từ chối kế hoạch (QLDT -> HR + LEAD) ======
     public void notify_PlanRejected(RecruitmentPlan plan, User qldt) {
-        String title = "Kế hoạch tuyển dụng bị từ chối";
-        String content = "QLĐT " + qldt.getFullName()
-                + " đã từ chối kế hoạch: \"" + plan.getPlanName() + "\".";
+        Long planId = plan.getRecruitmentPlanId();
 
-        // Gửi cho HR
+        // 🔹 Thông báo cho HR
+        String titleHr = "Kế hoạch tuyển dụng bạn phụ trách bị từ chối";
+        String contentHr = "QLĐT " + qldt.getFullName()
+                + " đã từ chối kế hoạch bạn phụ trách: \"" + plan.getPlanName() + "\".";
+
         notifyRole("HR", qldt,
                 "PLAN_REJECTED",
-                title, content,
-                "RECRUITMENT_PLAN", plan.getRecruitmentPlanId());
+                titleHr, contentHr,
+                "RECRUITMENT_PLAN", planId);
 
-        // ✅ Gửi thêm cho LEAD (bạn)
+        // 🔹 Thông báo cho LEAD – giữ nguyên format
+        String titleLead = "Kế hoạch tuyển dụng bị từ chối";
+        String contentLead = "QLĐT " + qldt.getFullName()
+                + " đã từ chối kế hoạch: \"" + plan.getPlanName() + "\".";
+
         notifyRole("LEAD", qldt,
                 "PLAN_REJECTED",
-                title, content,
-                "RECRUITMENT_PLAN", plan.getRecruitmentPlanId());
+                titleLead, contentLead,
+                "RECRUITMENT_PLAN", planId);
     }
 }
