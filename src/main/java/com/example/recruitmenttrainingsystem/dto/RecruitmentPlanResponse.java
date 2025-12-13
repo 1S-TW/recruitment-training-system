@@ -24,6 +24,15 @@ public class RecruitmentPlanResponse {
 
     private SimpleHrRequestDto request;
 
+    // ✅ NEW: người tạo kế hoạch (HR)
+    private String createdByName;
+
+    // ✅ NEW: người phê duyệt kế hoạch (QLDT)
+    private String confirmedByName;
+
+    // ✅ NEW: thời điểm phê duyệt (nếu bạn cần)
+    private LocalDateTime confirmedAt;
+
     // NEW: tên người từ chối kế hoạch (nếu có)
     private String rejectedByName;
 

@@ -220,6 +220,18 @@ public class RecruitmentPlanService {
             );
         }
 
+        // ✅ NEW: người tạo kế hoạch
+        String createdByName = null;
+        if (plan.getCreatedBy() != null) {
+            createdByName = plan.getCreatedBy().getFullName();
+        }
+
+        // ✅ NEW: người phê duyệt kế hoạch
+        String confirmedByName = null;
+        if (plan.getConfirmedBy() != null) {
+            confirmedByName = plan.getConfirmedBy().getFullName();
+        }
+
         // ===== 4. Người từ chối kế hoạch (nếu có) =====
         String rejectedByName = null;
         if (plan.getRejectedBy() != null) {
@@ -236,11 +248,9 @@ public class RecruitmentPlanService {
         }
         int totalInput = totalOutput * 2; // SL ĐẦU VÀO = gấp đôi
 
-        // Số ứng viên PASS (distinct theo candidate)
         long passCount = candidateResultRepository
                 .countDistinctPassCandidates(plan.getRecruitmentPlanId());
 
-        // Số thực tập sinh đã được tạo từ kế hoạch này
         long internCount = internRepository
                 .countByRecruitmentPlan_RecruitmentPlanId(plan.getRecruitmentPlanId());
 
@@ -253,11 +263,16 @@ public class RecruitmentPlanService {
                 plan.getDeliveryDeadline(),
                 plan.getCreatedAt(),
                 plan.getNote(),
-                reqDto,          // ✅ thông tin nhu cầu
-                rejectedByName,  // ✅ người từ chối (nếu có)
-                totalInput,      // 🔹 SL đầu vào (dùng cho quota ứng viên / đào tạo)
-                passCount,       // 🔹 số candidate PASS
-                internCount      // 🔹 số Intern (ứng viên đã nhận việc)
+                reqDto,
+
+                createdByName,              // ✅ NEW
+                confirmedByName,            // ✅ NEW
+                plan.getConfirmedAt(),      // ✅ NEW
+
+                rejectedByName,
+                totalInput,
+                passCount,
+                internCount
         );
     }
 

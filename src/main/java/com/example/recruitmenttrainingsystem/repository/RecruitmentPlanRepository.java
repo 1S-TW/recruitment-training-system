@@ -16,9 +16,12 @@ public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan
     @Query("""
         SELECT DISTINCT r FROM RecruitmentPlan r
         LEFT JOIN FETCH r.request req
-        LEFT JOIN FETCH req.createdBy
+        LEFT JOIN FETCH req.createdBy reqCreator
         LEFT JOIN FETCH req.quantityCandidates qc
         LEFT JOIN FETCH qc.technology
+        LEFT JOIN FETCH r.createdBy planCreator
+        LEFT JOIN FETCH r.confirmedBy planConfirmer
+        LEFT JOIN FETCH r.rejectedBy planRejecter
         WHERE (:status IS NULL OR r.status = :status)
         ORDER BY r.createdAt DESC
     """)
@@ -30,6 +33,6 @@ public interface RecruitmentPlanRepository extends JpaRepository<RecruitmentPlan
     // Kiểm tra/ lấy Plan theo requestId (One-to-One)
     Optional<RecruitmentPlan> findByRequest_RequestId(Long requestId);
 
-    // ⭐ NEW: tìm kế hoạch theo từ khóa trong tên (phục vụ hỏi điểm TB theo keyword, vd: "qq")
+    // ⭐ NEW: tìm kế hoạch theo từ khóa trong tên
     List<RecruitmentPlan> findByPlanNameContainingIgnoreCase(String keyword);
 }
