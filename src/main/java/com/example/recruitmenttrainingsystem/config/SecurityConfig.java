@@ -9,8 +9,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -50,22 +50,30 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration c = new CorsConfiguration();
 
-                    // ✅ FIX: thêm origin FE Render để không bị CORS khi deploy
-                    // Giữ nguyên localhost/127 để chạy local vẫn ngon
+                    // ✅ Allow local + Render FE domain
                     c.setAllowedOriginPatterns(List.of(
                             "http://localhost:5173",
                             "http://127.0.0.1:5173",
-                            "https://recruitment-training-system-fe.onrender.com"
+                            "https://recruitment-training-system-fe.onrender.com",
+                            "https://*.onrender.com"
                     ));
 
                     c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     c.setAllowedHeaders(List.of("*"));
+
+                    // Bạn đang để true. OK (dù bạn dùng JWT Bearer là chính)
                     c.setAllowCredentials(true);
+
+                    // Nếu cần đọc header custom từ response
+                    c.setExposedHeaders(List.of("Authorization"));
+
+                    // Cache preflight
+                    c.setMaxAge(3600L);
+
                     return c;
                 }))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép OPTIONS cho CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // ===== PUBLIC ENDPOINTS =====
