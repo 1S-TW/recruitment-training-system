@@ -49,11 +49,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration c = new CorsConfiguration();
-                    // ✅ CHO PHÉP CẢ localhost VÀ 127.0.0.1 (và có thể thêm origin khác nếu cần)
+
+                    // ✅ FIX: thêm origin FE Render để không bị CORS khi deploy
+                    // Giữ nguyên localhost/127 để chạy local vẫn ngon
                     c.setAllowedOriginPatterns(List.of(
                             "http://localhost:5173",
-                            "http://127.0.0.1:5173"
+                            "http://127.0.0.1:5173",
+                            "https://recruitment-training-system-fe.onrender.com"
                     ));
+
                     c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     c.setAllowedHeaders(List.of("*"));
                     c.setAllowCredentials(true);
@@ -70,49 +74,38 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
 
                         // --- 1. NHU CẦU NHÂN SỰ (HrRequest) ---
-                        // Xem: Tất cả
                         .requestMatchers(HttpMethod.GET, "/api/hr-request/**")
                         .hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
-                        // Tạo/Sửa: Chỉ LEAD và ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/create")
                         .hasAnyRole("SUPER_ADMIN", "LEAD")
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/update/**")
                         .hasAnyRole("SUPER_ADMIN", "LEAD")
-                        // Duyệt/Từ chối: Chỉ HR và ADMIN
                         .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/approve")
                         .hasAnyRole("SUPER_ADMIN", "HR")
                         .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/reject")
                         .hasAnyRole("SUPER_ADMIN", "HR")
 
                         // --- 2. KẾ HOẠCH TUYỂN DỤNG (RecruitmentPlan) ---
-                        // Xem: Tất cả
                         .requestMatchers(HttpMethod.GET, "/api/recruitment-plans/**")
                         .hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
-                        // Tạo: HR và Admin (QLDT không tạo)
                         .requestMatchers(HttpMethod.POST, "/api/recruitment-plans")
                         .hasAnyRole("SUPER_ADMIN", "HR")
-                        // Phê duyệt/Từ chối: Admin và QLDT (Training Manager)
                         .requestMatchers(HttpMethod.PUT, "/api/recruitment-plans/*/confirm")
                         .hasAnyRole("SUPER_ADMIN", "QLDT")
                         .requestMatchers(HttpMethod.POST, "/api/recruitment-plans/*/reject")
                         .hasAnyRole("SUPER_ADMIN", "QLDT")
 
                         // --- 3. ỨNG VIÊN (Candidate) ---
-                        // Xem: Tất cả
                         .requestMatchers(HttpMethod.GET, "/api/candidates/**")
                         .hasAnyRole("SUPER_ADMIN", "QLDT", "HR", "LEAD")
-                        // Tạo: HR và Admin
                         .requestMatchers(HttpMethod.POST, "/api/candidates/create")
                         .hasAnyRole("SUPER_ADMIN", "HR")
-                        // Sửa/Chấm điểm: HR, QLDT, Admin
                         .requestMatchers(HttpMethod.PUT, "/api/candidates/*/save-result")
                         .hasAnyRole("SUPER_ADMIN", "QLDT", "HR")
 
                         // --- 4. ĐÀO TẠO (Training) ---
-                        // Xem: Tất cả (HR, LEAD xem list, QLDT/Admin thao tác)
                         .requestMatchers(HttpMethod.GET, "/api/trainings/**")
                         .hasAnyRole("SUPER_ADMIN", "QLDT", "LEAD", "HR")
-                        // Sửa/Chấm điểm/Dừng: Chỉ QLDT và Admin
                         .requestMatchers("/api/trainings/**")
                         .hasAnyRole("SUPER_ADMIN", "QLDT")
 
@@ -123,7 +116,6 @@ public class SecurityConfig {
                         // --- 6. ADMIN ONLY ---
                         .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
 
-                        // Các request còn lại phải đăng nhập
                         .anyRequest().authenticated()
                 );
 
