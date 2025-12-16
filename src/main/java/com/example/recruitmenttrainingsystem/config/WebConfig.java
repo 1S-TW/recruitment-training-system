@@ -10,17 +10,15 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                // ✅ dùng allowedOriginPatterns để hỗ trợ domain deploy
+        registry.addMapping("/**")
                 .allowedOriginPatterns(
                         "http://localhost:5173",
                         "http://127.0.0.1:5173",
-                        "https://recruitment-training-system-fe.onrender.com"
+                        "https://recruitment-training-system-fe.onrender.com",
+                        "https://*.onrender.com"
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .exposedHeaders("Authorization")
-                .allowCredentials(true)
-                .maxAge(3600);
+                .allowCredentials(true);
     }
 }

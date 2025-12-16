@@ -37,7 +37,9 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-        authBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+        authBuilder
+                .userDetailsService(userDetailsService)
+                .passwordEncoder(passwordEncoder());
         return authBuilder.build();
     }
 
@@ -48,24 +50,24 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration c = new CorsConfiguration();
 
-                    // ✅ Allow local + FE Render (đúng domain của FE bạn)
+                    // ✅ Allow local + Render FE domain
                     c.setAllowedOriginPatterns(List.of(
                             "http://localhost:5173",
                             "http://127.0.0.1:5173",
-                            "https://recruitment-training-system-fe.onrender.com"
-                            // nếu bạn đổi FE domain khác, thêm vào đây
+                            "https://recruitment-training-system-fe.onrender.com",
+                            "https://*.onrender.com"
                     ));
 
                     c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     c.setAllowedHeaders(List.of("*"));
+
+                    // ✅ Nếu FE có dùng cookie/withCredentials thì giữ true
                     c.setAllowCredentials(true);
 
-                    // Nếu FE cần đọc header Authorization từ response
+                    // ✅ Nếu FE cần đọc header Authorization từ response
                     c.setExposedHeaders(List.of("Authorization"));
 
-                    // Cache preflight
                     c.setMaxAge(3600L);
-
                     return c;
                 }))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
