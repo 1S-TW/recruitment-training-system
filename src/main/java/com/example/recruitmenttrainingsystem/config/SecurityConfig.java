@@ -18,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -37,39 +39,39 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
         AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-        authBuilder
-                .userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder());
+        authBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
         return authBuilder.build();
+    }
+
+    // ✅ CORS chuẩn cho Spring Security
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration c = new CorsConfiguration();
+
+        c.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "https://recruitment-training-system-fe.onrender.com",
+                "https://*.onrender.com"
+        ));
+
+        c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        c.setAllowedHeaders(List.of("*"));
+        c.setAllowCredentials(true);
+
+        // nếu FE cần đọc Authorization header từ response
+        c.setExposedHeaders(List.of("Authorization"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", c);
+        return source;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(request -> {
-                    CorsConfiguration c = new CorsConfiguration();
-
-                    // ✅ Allow local + Render FE domain
-                    c.setAllowedOriginPatterns(List.of(
-                            "http://localhost:5173",
-                            "http://127.0.0.1:5173",
-                            "https://recruitment-training-system-fe.onrender.com",
-                            "https://*.onrender.com"
-                    ));
-
-                    c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    c.setAllowedHeaders(List.of("*"));
-
-                    // ✅ Nếu FE có dùng cookie/withCredentials thì giữ true
-                    c.setAllowCredentials(true);
-
-                    // ✅ Nếu FE cần đọc header Authorization từ response
-                    c.setExposedHeaders(List.of("Authorization"));
-
-                    c.setMaxAge(3600L);
-                    return c;
-                }))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -79,7 +81,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        // --- 1. NHU CẦU NHÂN SỰ (HrRequest) ---
+                        // --- 1. HR REQUEST ---
                         .requestMatchers(HttpMethod.GET, "/api/hr-request/**")
                         .hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
                         .requestMatchers(HttpMethod.POST, "/api/hr-request/create")
@@ -91,7 +93,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/hr-request/*/reject")
                         .hasAnyRole("SUPER_ADMIN", "HR")
 
-                        // --- 2. KẾ HOẠCH TUYỂN DỤNG (RecruitmentPlan) ---
+                        // --- 2. RECRUITMENT PLAN ---
                         .requestMatchers(HttpMethod.GET, "/api/recruitment-plans/**")
                         .hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
                         .requestMatchers(HttpMethod.POST, "/api/recruitment-plans")
@@ -101,7 +103,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/recruitment-plans/*/reject")
                         .hasAnyRole("SUPER_ADMIN", "QLDT")
 
-                        // --- 3. ỨNG VIÊN (Candidate) ---
+                        // --- 3. CANDIDATE ---
                         .requestMatchers(HttpMethod.GET, "/api/candidates/**")
                         .hasAnyRole("SUPER_ADMIN", "QLDT", "HR", "LEAD")
                         .requestMatchers(HttpMethod.POST, "/api/candidates/create")
@@ -109,13 +111,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/candidates/*/save-result")
                         .hasAnyRole("SUPER_ADMIN", "QLDT", "HR")
 
-                        // --- 4. ĐÀO TẠO (Training) ---
+                        // --- 4. TRAINING ---
                         .requestMatchers(HttpMethod.GET, "/api/trainings/**")
                         .hasAnyRole("SUPER_ADMIN", "QLDT", "LEAD", "HR")
                         .requestMatchers("/api/trainings/**")
                         .hasAnyRole("SUPER_ADMIN", "QLDT")
 
-                        // --- 5. THÔNG BÁO (Notification) ---
+                        // --- 5. NOTIFICATION ---
                         .requestMatchers("/api/notifications/**")
                         .hasAnyRole("SUPER_ADMIN", "LEAD", "QLDT", "HR")
 
