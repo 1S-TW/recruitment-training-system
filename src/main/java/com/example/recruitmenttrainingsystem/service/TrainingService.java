@@ -178,18 +178,7 @@ public class TrainingService {
             throw new IllegalArgumentException("Môn " + s.getCourseName() + " đã chấm đủ 3 lần!");
         }
 
-        // 2. Đã từng đạt ≥7 → KHÓA LUÔN, không cho chấm lại
-        if (currentAttempts > 0) {
-            CourseScoreHistory last = courseScoreHistoryRepository
-                    .findTopByCourseResultOrderByAttemptNumberDesc(cr)
-                    .orElseThrow();
-
-            if (last.getTotalScore() != null && last.getTotalScore().compareTo(BigDecimal.valueOf(7)) >= 0) {
-                throw new IllegalArgumentException("Môn " + s.getCourseName() + " đã đạt từ lần trước, không thể chấm lại!");
-            }
-        }
-
-        // 3. Kiểm tra đủ 3 điểm
+        // 2. Kiểm tra đủ 3 điểm
         if (s.getTheoryScore() == null || s.getPracticeScore() == null || s.getAttitudeScore() == null) {
             throw new IllegalArgumentException("Phải nhập đủ 3 loại điểm cho môn " + s.getCourseName());
         }
@@ -199,14 +188,14 @@ public class TrainingService {
                 .add(s.getAttitudeScore())
                 .divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
 
-        // 4. Điểm <7 → bắt buộc lý do
+        // 3. Điểm <7 → bắt buộc lý do
         if (newTotal.compareTo(BigDecimal.valueOf(7)) < 0) {
             if (s.getReason() == null || s.getReason().trim().isEmpty()) {
                 throw new IllegalArgumentException("Điểm môn " + s.getCourseName() + " = " + newTotal + " < 7 → Bắt buộc nhập lý do!");
             }
         }
 
-        // 5. Lưu lịch sử + cập nhật điểm hiện tại
+        // 4. Lưu lịch sử + cập nhật điểm hiện tại
         CourseScoreHistory history = CourseScoreHistory.builder()
                 .courseResult(cr)
                 .attemptNumber(currentAttempts + 1)
