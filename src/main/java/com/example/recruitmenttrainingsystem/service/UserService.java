@@ -26,7 +26,7 @@ public class UserService {
     private final EmailService emailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
 
-    // REGISTER
+    // REGISTER (✅ TẮT XÁC NHẬN EMAIL)
     public void register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new CustomException("Email đã tồn tại");
@@ -36,25 +36,26 @@ public class UserService {
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .emailVerified(false)
+                .emailVerified(true)   // ✅ luôn true
                 .status(true)
                 .createdAt(Instant.now())
                 .build();
 
         userRepository.save(user);
 
-        String token = UUID.randomUUID().toString();
-        VerificationToken vt = VerificationToken.builder()
-                .token(token)
-                .user(user)
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        verificationTokenRepository.save(vt);
-        emailService.sendVerificationEmail(user.getEmail(), token, user.getFullName());
+        // ✅ KHÔNG tạo verification token
+        // ✅ KHÔNG gửi mail
+        // String token = UUID.randomUUID().toString();
+        // VerificationToken vt = VerificationToken.builder()
+        //         .token(token)
+        //         .user(user)
+        //         .expiresAt(Instant.now().plusSeconds(3600))
+        //         .build();
+        // verificationTokenRepository.save(vt);
+        // emailService.sendVerificationEmail(user.getEmail(), token, user.getFullName());
     }
 
-    // VERIFY
+    // VERIFY (giữ lại để khỏi lỗi compile nếu controller vẫn gọi)
     public void verifyEmail(String token) {
         VerificationToken vt = verificationTokenRepository.findByToken(token)
                 .orElseThrow(() -> new CustomException("Token không hợp lệ"));
@@ -69,22 +70,16 @@ public class UserService {
         verificationTokenRepository.delete(vt);
     }
 
-    // LOGIN - cho phép tài khoản đã khóa vẫn đăng nhập, để FE hiển thị modal khóa tài khoản
+    // LOGIN (✅ BỎ CHECK EMAIL VERIFIED)
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException("Email không tồn tại"));
 
-        // 1. Kiểm tra xác thực email
-        if (!user.isEmailVerified()) {
-            throw new CustomException("Email chưa xác thực");
-        }
-
-        // 2. KHÔNG chặn theo status nữa
-        // if (!user.isStatus()) {
-        //     throw new CustomException("Tài khoản đã bị khóa. Vui lòng liên hệ Admin.");
+        // ✅ Bỏ check emailVerified
+        // if (!user.isEmailVerified()) {
+        //     throw new CustomException("Email chưa xác thực");
         // }
 
-        // 3. Kiểm tra mật khẩu
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new CustomException("Sai mật khẩu");
         }
@@ -96,7 +91,6 @@ public class UserService {
 
         String token = jwtUtil.generateToken(user.getEmail(), role);
 
-        // ✅ Trả thêm status để FE dùng cho AccountLockedModal
         return new LoginResponse(
                 token,
                 role,
@@ -106,7 +100,7 @@ public class UserService {
         );
     }
 
-    // Forgot pasword
+    // Forgot password (GIỮ NGUYÊN - vẫn dùng mail reset nếu bạn muốn)
     public void forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException("Email không tồn tại"));
@@ -170,7 +164,6 @@ public class UserService {
             throw new CustomException("Admin không thể tự thay đổi role hoặc trạng thái của chính mình.");
         }
 
-        // Cập nhật Role
         String newRoleName = request.getRoleName();
         if (newRoleName == null || newRoleName.trim().isEmpty()) {
             targetUser.setRole(null);
@@ -180,7 +173,6 @@ public class UserService {
             targetUser.setRole(newRole);
         }
 
-        // Cập nhật Status
         if (request.getStatus() != null) {
             targetUser.setStatus(request.getStatus());
         }
