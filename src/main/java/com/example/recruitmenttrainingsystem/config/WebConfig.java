@@ -1,4 +1,6 @@
+// src/main/java/com/example/recruitmenttrainingsystem/config/WebConfig.java
 package com.example.recruitmenttrainingsystem.config;
+
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -8,10 +10,17 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**") // Chỉ cho phép CORS cho các đường dẫn bắt đầu bằng /api/
-                .allowedOrigins("http://localhost:5173")
+        registry.addMapping("/api/**")
+                // ✅ dùng allowedOriginPatterns để hỗ trợ domain deploy
+                .allowedOriginPatterns(
+                        "http://localhost:5173",
+                        "http://127.0.0.1:5173",
+                        "https://recruitment-training-system-fe.onrender.com"
+                )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true);
+                .exposedHeaders("Authorization")
+                .allowCredentials(true)
+                .maxAge(3600);
     }
 }
