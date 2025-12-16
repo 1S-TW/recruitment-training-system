@@ -2,12 +2,7 @@
 package com.example.recruitmenttrainingsystem.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,10 +51,27 @@ public class RecruitmentPlan {
     @Column(name = "note", length = 255)
     private String note;
 
+    // ===== Người tạo kế hoạch =====
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User createdBy;
+
+    // ===== Người phê duyệt kế hoạch (CONFIRMED) =====
+    @ManyToOne
+    @JoinColumn(name = "confirmed_by")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private User confirmedBy;
+
+    @Column(name = "confirmed_at", columnDefinition = "DATETIME(6)")
+    private LocalDateTime confirmedAt;
+
     // ===== Quan hệ 1–N với Candidate =====
     @OneToMany(
             mappedBy = "recruitmentPlan",
-            cascade = CascadeType.ALL,   // ✅ VIẾT HOA
+            cascade = CascadeType.ALL,
             orphanRemoval = true
     )
     @ToString.Exclude

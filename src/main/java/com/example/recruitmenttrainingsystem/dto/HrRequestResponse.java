@@ -13,10 +13,13 @@ public class HrRequestResponse {
     private LocalDate expectedDeliveryDate;
     private LocalDateTime createdAt;
     private String note;
+
     private String createdByName;
+    private String approvedByName;       // ✅ người phê duyệt nhu cầu
+
     private List<TechQuantityDto> techQuantities;
 
-    // ✅ lý do từ chối riêng
+    // ✅ lý do từ chối riêng (đã format: "Người từ chối nhu cầu: ... Lý do: ...")
     private String rejectReason;
 
     public HrRequestResponse(
@@ -27,8 +30,9 @@ public class HrRequestResponse {
             LocalDateTime createdAt,
             String note,
             String createdByName,
+            String approvedByName,
             List<TechQuantityDto> techQuantities,
-            String rejectReason          // ✅ thêm tham số
+            String rejectReason
     ) {
         this.requestId = requestId;
         this.requestTitle = requestTitle;
@@ -37,21 +41,48 @@ public class HrRequestResponse {
         this.createdAt = createdAt;
         this.note = note;
         this.createdByName = createdByName;
+        this.approvedByName = approvedByName;
         this.techQuantities = techQuantities;
-        this.rejectReason = rejectReason;   // ✅ gán
+        this.rejectReason = rejectReason;
     }
 
-    // GETTERS
-    public Long getRequestId() { return requestId; }
-    public String getRequestTitle() { return requestTitle; }
-    public String getStatus() { return status; }
-    public LocalDate getExpectedDeliveryDate() { return expectedDeliveryDate; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public String getNote() { return note; }
-    public String getCreatedByName() { return createdByName; }
-    public List<TechQuantityDto> getTechQuantities() { return techQuantities; }
+    public Long getRequestId() {
+        return requestId;
+    }
 
-    public String getRejectReason() {   // ✅ thêm getter
+    public String getRequestTitle() {
+        return requestTitle;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public LocalDate getExpectedDeliveryDate() {
+        return expectedDeliveryDate;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public String getCreatedByName() {
+        return createdByName;
+    }
+
+    public String getApprovedByName() {
+        return approvedByName;
+    }
+
+    public List<TechQuantityDto> getTechQuantities() {
+        return techQuantities;
+    }
+
+    public String getRejectReason() {
         return rejectReason;
     }
 }

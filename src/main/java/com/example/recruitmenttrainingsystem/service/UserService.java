@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -27,7 +28,6 @@ public class UserService {
 
     // REGISTER
     public void register(RegisterRequest request) {
-
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new CustomException("Email đã tồn tại");
         }
@@ -44,7 +44,6 @@ public class UserService {
         userRepository.save(user);
 
         String token = UUID.randomUUID().toString();
-
         VerificationToken vt = VerificationToken.builder()
                 .token(token)
                 .user(user)
@@ -52,7 +51,6 @@ public class UserService {
                 .build();
 
         verificationTokenRepository.save(vt);
-
         emailService.sendVerificationEmail(user.getEmail(), token, user.getFullName());
     }
 
@@ -68,20 +66,25 @@ public class UserService {
         User u = vt.getUser();
         u.setEmailVerified(true);
         userRepository.save(u);
-
         verificationTokenRepository.delete(vt);
     }
 
-    // LOGIN
+    // LOGIN - cho phép tài khoản đã khóa vẫn đăng nhập, để FE hiển thị modal khóa tài khoản
     public LoginResponse login(LoginRequest request) {
-
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException("Email không tồn tại"));
 
+        // 1. Kiểm tra xác thực email
         if (!user.isEmailVerified()) {
             throw new CustomException("Email chưa xác thực");
         }
 
+        // 2. KHÔNG chặn theo status nữa
+        // if (!user.isStatus()) {
+        //     throw new CustomException("Tài khoản đã bị khóa. Vui lòng liên hệ Admin.");
+        // }
+
+        // 3. Kiểm tra mật khẩu
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new CustomException("Sai mật khẩu");
         }
@@ -93,29 +96,34 @@ public class UserService {
 
         String token = jwtUtil.generateToken(user.getEmail(), role);
 
-        return new LoginResponse(token, role, user.getFullName(),user.getId());
+        // ✅ Trả thêm status để FE dùng cho AccountLockedModal
+        return new LoginResponse(
+                token,
+                role,
+                user.getFullName(),
+                user.getId(),
+                user.isStatus()
+        );
     }
+
     // Forgot pasword
     public void forgotPassword(ForgotPasswordRequest request) {
-
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException("Email không tồn tại"));
 
         String token = UUID.randomUUID().toString();
-
         PasswordResetToken prt = PasswordResetToken.builder()
                 .token(token)
                 .user(user)
-                .expiresAt(Instant.now().plusSeconds(1800)) // 30 phút
+                .expiresAt(Instant.now().plusSeconds(1800))
                 .build();
 
         passwordResetTokenRepository.save(prt);
-
         emailService.sendResetPasswordEmail(user.getEmail(), token);
     }
-    //reset password
-    public void resetPassword(ResetPasswordRequest request) {
 
+    // Reset password
+    public void resetPassword(ResetPasswordRequest request) {
         PasswordResetToken prt = passwordResetTokenRepository.findByToken(request.getToken())
                 .orElseThrow(() -> new CustomException("Token không hợp lệ"));
 
@@ -124,66 +132,59 @@ public class UserService {
         }
 
         User user = prt.getUser();
-
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-
-        // Xoá token sau khi dùng
         passwordResetTokenRepository.delete(prt);
     }
-    // change pasword
-    public void changePassword(String email, ChangePasswordRequest request) {
 
+    // Change password
+    public void changePassword(String email, ChangePasswordRequest request) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException("Không tìm thấy user"));
 
-        // 1. Check mật khẩu cũ
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
             throw new CustomException("Mật khẩu cũ không đúng");
         }
 
-        // 2. Set mật khẩu mới
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
     }
-    // (admin) lay tat ca tai khoan
-    public List<UserManagementDTO> getAllUsersForAdmin() {
-        // Dùng hàm findAll() có sẵn của JpaRepository
-        List<User> users = userRepository.findAll();
 
-        // Chuyển User (Entity) sang UserManagementDTO
+    // (Admin) Get all users
+    public List<UserManagementDTO> getAllUsersForAdmin() {
+        List<User> users = userRepository.findAll();
         return users.stream()
                 .map(UserManagementDTO::new)
                 .collect(Collectors.toList());
     }
-    // phan quyen ( ADMIN )
-    public void assignRole(UUID userId, AssignRoleRequest request, String adminEmail) {
 
-        // 1. Tìm user mục tiêu
+    // PHÂN QUYỀN (ADMIN)
+    public void assignRole(UUID userId, AssignRoleRequest request, String adminEmail) {
         User targetUser = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException("Không tìm thấy user với ID: " + userId));
 
-        // 2. Tìm role mới
-        String newRoleName = request.getRoleName();
-        Role newRole = roleRepository.findByRoleName(newRoleName)
-                .orElseThrow(() -> new CustomException("Không tìm thấy role: " + newRoleName));
-
-        // 3. (Rất quan trọng) Kiểm tra admin có tự đổi role của chính mình không
         User adminUser = userRepository.findByEmail(adminEmail)
                 .orElseThrow(() -> new CustomException("Lỗi: Không tìm thấy admin user"));
 
         if (adminUser.getId().equals(targetUser.getId())) {
-            throw new CustomException("Admin không thể tự thay đổi role của chính mình.");
+            throw new CustomException("Admin không thể tự thay đổi role hoặc trạng thái của chính mình.");
         }
 
-        // 4. Kiểm tra xem role có thực sự thay đổi không
-        if (targetUser.getRole().getRoleName().equals(newRoleName)) {
-            throw new CustomException("User đã có role này rồi.");
+        // Cập nhật Role
+        String newRoleName = request.getRoleName();
+        if (newRoleName == null || newRoleName.trim().isEmpty()) {
+            targetUser.setRole(null);
+        } else {
+            Role newRole = roleRepository.findByRoleName(newRoleName)
+                    .orElseThrow(() -> new CustomException("Không tìm thấy role: " + newRoleName));
+            targetUser.setRole(newRole);
         }
 
-        // 5. Cập nhật và lưu
-        targetUser.setRole(newRole);
+        // Cập nhật Status
+        if (request.getStatus() != null) {
+            targetUser.setStatus(request.getStatus());
+        }
+
         userRepository.save(targetUser);
     }
-
 }

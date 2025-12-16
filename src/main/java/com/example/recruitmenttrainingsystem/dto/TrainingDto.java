@@ -16,13 +16,15 @@ public class TrainingDto {
     private String fullName;
 
     private LocalDate startDate;
+    private LocalDate endDate;
     private Long trainingDays;
 
     private List<CourseScoreDto> scores;
-
+    private Long recruitmentPlanId;
     private BigDecimal summaryResult;
-    private BigDecimal teamReview;
+    private String teamReview;
     private String internshipResult;
 
     private String internStatus;
+
 }

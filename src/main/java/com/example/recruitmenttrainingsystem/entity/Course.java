@@ -10,10 +10,14 @@ import java.util.List;
 
 @Entity
 @Table(name = "course")
-@Data @Builder
-@NoArgsConstructor @AllArgsConstructor
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Course {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "course_id")
     private Long courseId;
 
@@ -22,6 +26,13 @@ public class Course {
 
     @Column(length = 500)
     private String description;
+
+    @Column(name = "duration_days")
+    private Integer durationDays;
+
+    // 🔴 NEW: map cột display_order trong DB
+    @Column(name = "display_order")
+    private Integer displayOrder;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore

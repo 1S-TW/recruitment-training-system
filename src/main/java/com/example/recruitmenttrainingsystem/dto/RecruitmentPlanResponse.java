@@ -24,8 +24,21 @@ public class RecruitmentPlanResponse {
 
     private SimpleHrRequestDto request;
 
+    // ✅ NEW: người tạo kế hoạch (HR)
+    private String createdByName;
+
+    // ✅ NEW: người phê duyệt kế hoạch (QLDT)
+    private String confirmedByName;
+
+    // ✅ NEW: thời điểm phê duyệt (nếu bạn cần)
+    private LocalDateTime confirmedAt;
+
     // NEW: tên người từ chối kế hoạch (nếu có)
     private String rejectedByName;
+
+    private Integer totalInput;   // SL đầu vào (gấp đôi nhu cầu)
+    private Long passCount;       // số candidate PASS
+    private Long internCount;     // số ứng viên đã nhận việc (thực tập sinh)
 
     // ========== NESTED DTOS ==========
 
